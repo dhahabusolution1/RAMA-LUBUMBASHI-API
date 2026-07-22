@@ -8,8 +8,48 @@ const pool = new Pool({ connectionString: process.env['DATABASE_URL'] });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
+/**
+ * Supprime les données de démo pour éviter les doublons
+ * quand `npm run db:seed` est relancé plusieurs fois.
+ * Les comptes / églises sont ensuite recréés via upsert.
+ */
+async function cleanDemoData() {
+  console.log('Nettoyage des donnees de demo (anti-doublons)...');
+
+  await prisma.auditLog.deleteMany();
+  await prisma.notification.deleteMany();
+  await prisma.fcmToken.deleteMany();
+  await prisma.message.deleteMany();
+  await prisma.conversation.deleteMany();
+  await prisma.inscriptionDepartement.deleteMany();
+  await prisma.inscriptionSession.deleteMany();
+  await prisma.sessionFormulaire.deleteMany();
+  await prisma.rendezVous.deleteMany();
+  await prisma.requete.deleteMany();
+  await prisma.donTransaction.deleteMany();
+  await prisma.articleBookshop.deleteMany();
+  await prisma.citation.deleteMany();
+  await prisma.shortVideo.deleteMany();
+  await prisma.emission.deleteMany();
+  await prisma.culte.deleteMany();
+  await prisma.sermon.deleteMany();
+  await prisma.playlistSermon.deleteMany();
+  await prisma.evenement.deleteMany();
+  await prisma.versetJour.deleteMany();
+  await prisma.cellule.deleteMany();
+  await prisma.departement.deleteMany();
+  await prisma.coordonneesDon.deleteMany();
+  await prisma.imageAccueil.deleteMany();
+  await prisma.eglise.deleteMany();
+  await prisma.user.deleteMany();
+  await prisma.configurationApp.deleteMany();
+
+  console.log('Nettoyage OK');
+}
+
 async function main() {
   console.log('Demarrage du seed...');
+  await cleanDemoData();
 
   // ─── CONFIG SINGLETON ─────────────────────────────────────────
   const config = await prisma.configurationApp.upsert({
@@ -24,13 +64,6 @@ async function main() {
       programmeHebdomadaire: 'Dimanche (culte) | Séminaires en semaine | Émissions en ligne',
       programmeDimanche: '08h00 — Accueil\n08h30 — Louange & adoration\n09h15 — Parole\n10h00 — Prière & annonces\n10h30 — Bénédiction',
       numeroWhatsappContact: '+243814993485',
-      messagesAccueil: {
-        create: [
-          { contenu: 'Bienvenue sur l'application officielle de l'Église Arche Source de Vie. Recevez la Vie !', ordre: 0, estActif: true },
-          { contenu: 'Recevez la Parole qui libère et transforme les vies.', ordre: 1, estActif: true },
-          { contenu: 'Cultes dominicaux | Séminaires couples & familles | Recevez la Vie TV', ordre: 2, estActif: true },
-        ],
-      },
       coordonneesDons: {
         create: [
           { libelle: 'Mobile Money – Orange', valeur: '+243890123456', detail: 'Au nom de Arche Source de Vie', ordre: 0 },
@@ -269,16 +302,16 @@ async function main() {
   });
   console.log('Citations OK');
 
-  // ─── LIVRES (BOOKSHOP) ────────────────────────────────────────
-  await prisma.livre.createMany({
+  // ─── ARTICLES BOOKSHOP ────────────────────────────────────────
+  await prisma.articleBookshop.createMany({
     data: [
-      { titre: 'La Bible du Semeur', auteur: 'Collectif', prix: 25.00, description: 'La version du Semeur, traduction claire et lisible en francais contemporain. Edition integrale avec notes.', estDisponible: true, numeroWhatsappAchat: '+243976543210' },
-      { titre: 'Vivre dans la presence de Dieu', auteur: 'Apôtre Israël Monga', prix: 8.50, description: 'Un guide pratique pour developper une vie de priere profonde et une communion intime avec Dieu.', estDisponible: true },
-      { titre: 'Prieres et Declarations', auteur: 'John Hagee', prix: 12.00, description: 'Un recueil de prieres scripturaires pour toutes les situations de la vie. Traduit en francais.', estDisponible: true },
-      { titre: 'Le Pouvoir de la Parole', auteur: 'Kenneth Hagin', prix: 10.00, description: 'Comment les paroles que nous prononcons facon notre realite selon les principes bibliques.', estDisponible: false },
+      { titre: 'La Bible du Semeur', auteur: 'Collectif', prix: 25.00, description: 'La version du Semeur, traduction claire et lisible en francais contemporain. Edition integrale avec notes.', estDisponible: true, numeroWhatsappAchat: '+243814993485', typeArticle: 'LIVRE', stock: 20 },
+      { titre: 'Vivre dans la presence de Dieu', auteur: 'Apôtre Israël Monga', prix: 8.50, description: 'Un guide pratique pour developper une vie de priere profonde et une communion intime avec Dieu.', estDisponible: true, typeArticle: 'LIVRE', stock: 15 },
+      { titre: 'Prieres et Declarations', auteur: 'John Hagee', prix: 12.00, description: 'Un recueil de prieres scripturaires pour toutes les situations de la vie. Traduit en francais.', estDisponible: true, typeArticle: 'LIVRE', stock: 10 },
+      { titre: 'Le Pouvoir de la Parole', auteur: 'Kenneth Hagin', prix: 10.00, description: 'Comment les paroles que nous prononcons facon notre realite selon les principes bibliques.', estDisponible: false, typeArticle: 'LIVRE', stock: 0 },
     ],
   });
-  console.log('Livres OK');
+  console.log('Bookshop OK');
 
   // ─── REQUETES (6 types) ──────────────────────────────────────
   await prisma.requete.create({
