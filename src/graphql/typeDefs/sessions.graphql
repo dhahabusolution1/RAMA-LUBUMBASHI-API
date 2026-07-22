@@ -1,0 +1,170 @@
+enum TypeSession {
+  BAPTEME
+  ENREGISTREMENT_MEMBRE
+}
+
+enum StatutInscription {
+  EN_ATTENTE
+  VALIDE
+  REFUSE
+}
+
+enum Sexe {
+  MASCULIN
+  FEMININ
+}
+
+enum EtatCivil {
+  CELIBATAIRE
+  MARIE
+  DIVORCE
+  VEUF
+}
+
+type SessionFormulaire {
+  id: ID!
+  titre: String!
+  description: String
+  type: TypeSession!
+  dateDebut: DateTime!
+  dateFin: DateTime!
+  estActif: Boolean!
+  inscriptions: [InscriptionSession!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type InscriptionDepartement {
+  id: ID!
+  departementId: ID
+  departement: Departement
+  fonction: String
+  depuis: Date
+  ordre: Int!
+}
+
+type InscriptionSession {
+  id: ID!
+  sessionFormulaireId: ID!
+  sessionFormulaire: SessionFormulaire!
+  user: User
+  nom: String!
+  postnom: String
+  prenom: String!
+  telephone: String!
+  adresse: String
+  egliseId: ID
+  eglise: Eglise
+  """Antenne / église d'appartenance (texte libre)."""
+  egliseNom: String
+  statut: StatutInscription!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+
+  # Identification membre (ENREGISTREMENT_MEMBRE)
+  matricule: String
+  matriculeExpireAt: DateTime
+  numeroCarteMembre: String
+  telephone2: String
+  email: String
+  sexe: Sexe
+  dateNaissance: Date
+  lieuNaissance: String
+  etatCivil: EtatCivil
+  dateBapteme: Date
+  lieuBapteme: String
+  dateAdhesion: Date
+  niveauEtudes: String
+  profession: String
+  adressePhysique: String
+  ville: String
+  commune: String
+  quartier: String
+  formationEglise: String
+  autresSavoirFaire: String
+  nomConjoint: String
+  nombreEnfants: Int
+  captureFicheUrl: String
+  captureFichePublicId: String
+  departements: [InscriptionDepartement!]!
+}
+
+input SessionFormulaireInput {
+  titre: String!
+  description: String
+  type: TypeSession!
+  dateDebut: DateTime!
+  dateFin: DateTime!
+  estActif: Boolean
+}
+
+input DepartementMembreInput {
+  departementId: ID
+  fonction: String
+  depuis: Date
+}
+
+input ProfilMembreInput {
+  telephone2: String
+  email: String
+  sexe: Sexe!
+  dateNaissance: Date!
+  lieuNaissance: String!
+  etatCivil: EtatCivil!
+  dateBapteme: Date
+  lieuBapteme: String
+  dateAdhesion: Date
+  niveauEtudes: String
+  profession: String
+  adressePhysique: String!
+  ville: String
+  commune: String
+  quartier: String
+  egliseId: ID
+  """Nom de l'église / antenne d'appartenance (texte libre, obligatoire)."""
+  egliseNom: String!
+  formationEglise: String
+  autresSavoirFaire: String
+  nomConjoint: String
+  nombreEnfants: Int
+  captureFicheUrl: String
+  captureFichePublicId: String
+  departements: [DepartementMembreInput!]
+}
+
+input InscriptionSessionInput {
+  sessionFormulaireId: ID!
+  adresse: String
+  egliseId: ID
+  profilMembre: ProfilMembreInput
+  
+  """Le numéro matricule généré à l'avance par l'admin requis pour soumettre l'identification membre."""
+  matriculeSaisi: String
+}
+
+extend type Query {
+  getSessions(type: TypeSession): [SessionFormulaire!]!
+  getSessionActive(type: TypeSession!): SessionFormulaire
+  getInscriptions(sessionId: ID!, search: String): [InscriptionSession!]!
+  getInscriptionById(id: ID!): InscriptionSession
+
+  """Vérifie si un numéro de matriculation pré-généré est valide, disponible pour enrôlement et non encore lié."""
+  verifierMatriculeEnrolement(matricule: String!): Boolean!
+}
+
+extend type Mutation {
+  creerSession(input: SessionFormulaireInput!): SessionFormulaire!
+  modifierSession(id: ID!, input: SessionFormulaireInput!): SessionFormulaire!
+  supprimerSession(id: ID!): Boolean!
+
+  """Génère à l'avance un numéro de matriculation vide destiné à être communiqué à un futur membre."""
+  preGenererMatricule(sessionId: ID!): InscriptionSession!
+
+  soumettreInscription(input: InscriptionSessionInput!): InscriptionSession!
+  modifierStatutInscription(
+    id: ID!
+    statut: StatutInscription!
+    matricule: String
+    numeroCarteMembre: String
+  ): InscriptionSession!
+}

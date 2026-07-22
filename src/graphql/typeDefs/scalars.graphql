@@ -1,0 +1,19 @@
+"""
+Scalaire representant une date et heure au format ISO 8601 (ex: 2026-04-30T10:00:00Z).
+"""
+scalar DateTime
+
+"""
+Scalaire representant une date uniquement au format ISO 8601 (ex: 2026-04-30).
+"""
+scalar Date
+
+"""
+Scalaire representant un nombre decimal (ex: prix d'un livre).
+"""
+scalar Decimal
+
+"""
+Scalaire representant un objet JSON arbitraire.
+"""
+scalar JSON

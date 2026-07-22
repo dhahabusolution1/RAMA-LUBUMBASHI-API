@@ -1,0 +1,137 @@
+enum Devise {
+  USD
+  CDF
+}
+
+enum CategorieArticle {
+  EGLISE
+  PARTENAIRE
+}
+
+enum TypeArticle {
+  LIVRE
+  VETEMENT
+  ACCESSOIRE
+  AUTRE
+}
+
+"""
+Article disponible dans la boutique de l'eglise.
+L'achat se fait via WhatsApp avec un message pre-redige.
+"""
+type ArticleBookshop {
+  id: ID!
+  titre: String!
+  auteur: String
+  prix: Decimal!
+  devise: Devise!
+  description: String
+  couvertureUrl: String
+  """
+  URL WhatsApp generee pour l'achat direct.
+  """
+  whatsappAchatUrl: String!
+  estDisponible: Boolean!
+  stock: Int!
+  ventes: Int!
+  categorie: CategorieArticle!
+  typeArticle: TypeArticle!
+  createdAt: DateTime!
+}
+
+"""
+Reponse paginee pour les articles.
+"""
+type ArticlesResponse {
+  items: [ArticleBookshop!]!
+  totalCount: Int!
+}
+
+"""
+Configuration des dons (singleton).
+"""
+type ConfigurationDons {
+  numeroWhatsappContact: String
+  coordonnees: [CoordonneesDon!]!
+}
+
+"""
+Coordonnees bancaires ou mobile money pour les dons.
+"""
+type CoordonneesDon {
+  id: ID!
+  libelle: String!
+  valeur: String!
+  detail: String
+}
+
+extend type Query {
+  """
+  Retourne le catalogue d'articles disponibles (estDisponible = true).
+  Acces public.
+  """
+  getArticles(categorie: CategorieArticle, typeArticle: TypeArticle, limit: Int = 20, offset: Int = 0): ArticlesResponse!
+
+  """
+  Retourne tous les articles. Acces reserve aux administrateurs.
+  """
+  getArticlesAdmin(search: String, categorie: CategorieArticle, typeArticle: TypeArticle, limit: Int = 20, offset: Int = 0): ArticlesResponse!
+
+  """
+  Retourne la configuration des dons. Acces public. Cache Redis (TTL 1h).
+  """
+  getConfigurationDons: ConfigurationDons!
+}
+
+extend type Mutation {
+  creerArticle(
+    titre: String!
+    auteur: String
+    prix: Decimal!
+    devise: Devise
+    description: String
+    couvertureUrl: String
+    cloudinaryPublicId: String
+    numeroWhatsappAchat: String
+    estDisponible: Boolean = true
+    stock: Int = 0
+    categorie: CategorieArticle = EGLISE
+    typeArticle: TypeArticle = LIVRE
+  ): ArticleBookshop!
+  
+  modifierArticle(
+    id: ID!
+    titre: String
+    auteur: String
+    prix: Decimal
+    devise: Devise
+    description: String
+    couvertureUrl: String
+    cloudinaryPublicId: String
+    numeroWhatsappAchat: String
+    estDisponible: Boolean
+    stock: Int
+    categorie: CategorieArticle
+    typeArticle: TypeArticle
+  ): ArticleBookshop!
+  
+  supprimerArticle(id: ID!): Boolean!
+  
+  signalerVente(id: ID!, quantite: Int = 1): ArticleBookshop!
+
+  """
+  Met a jour la configuration des dons. Acces exclusif au SUPER_ADMIN.
+  Cree la configuration si elle n'existe pas encore.
+  """
+  modifierConfigurationDons(
+    numeroWhatsappContact: String
+    coordonnees: [CoordonneesDonInput!]
+  ): ConfigurationDons!
+}
+
+input CoordonneesDonInput {
+  libelle: String!
+  valeur: String!
+  detail: String
+  ordre: Int = 0
+}

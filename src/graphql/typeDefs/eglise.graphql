@@ -1,0 +1,127 @@
+"""
+Antenne ou eglise locale du reseau La Parole Eternelle.
+Sert de referentiel pour les formulaires de demandes (bapteme, integration, etc.).
+"""
+type Eglise {
+  id: ID!
+  nom: String!
+  photoUrl: String
+  adresse: String
+  telephone: String
+  ville: String
+  lienFacebook: String
+  pasteurNom: String
+  pasteurPhotoUrl: String
+  cellules: [Cellule!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""
+Groupe de maison — unite organisationnelle de base de l'eglise.
+"""
+type Cellule {
+  id: ID!
+  nom: String!
+  quartiersCouvertes: String
+  adresseReunion: String
+  reference: String
+  telephone1: String
+  telephone2: String
+  eglise: Eglise
+  createdAt: DateTime!
+}
+
+"""
+Departement ministeriel de l'eglise.
+"""
+type Departement {
+  id: ID!
+  nom: String!
+  responsable: String
+  mission: String
+  historique: String
+  createdAt: DateTime!
+}
+
+# ─── QUERIES ─────────────────────────────────────────────────
+
+extend type Query {
+  """
+  Retourne la liste complete des antennes de l'eglise.
+  Acces public. Cache Redis (TTL 1h).
+  """
+  getEglises: [Eglise!]!
+
+  """Detail d'une antenne par ID."""
+  getEgliseById(id: ID!): Eglise
+
+  """
+  Retourne la liste des cellules, filtrable par antenne.
+  Acces public. Cache Redis (TTL 1h).
+  """
+  getCellules(egliseId: ID): [Cellule!]!
+
+  """
+  Retourne la liste de tous les departements.
+  Acces public. Cache Redis (TTL 1h).
+  """
+  getDepartements: [Departement!]!
+}
+
+# ─── MUTATIONS (SUPER_ADMIN uniquement) ──────────────────────
+
+extend type Mutation {
+  # Eglises
+  creerEglise(
+    nom: String!
+    photoUrl: String
+    adresse: String
+    telephone: String
+    ville: String
+    lienFacebook: String
+    pasteurNom: String
+    pasteurPhotoUrl: String
+    pasteurUserId: ID
+  ): Eglise!
+  modifierEglise(
+    id: ID!
+    nom: String
+    photoUrl: String
+    adresse: String
+    telephone: String
+    ville: String
+    lienFacebook: String
+    pasteurNom: String
+    pasteurPhotoUrl: String
+    pasteurUserId: ID
+  ): Eglise!
+  supprimerEglise(id: ID!): Boolean!
+
+  # Cellules
+  creerCellule(
+    nom: String!
+    quartiersCouvertes: String
+    adresseReunion: String
+    reference: String
+    telephone1: String
+    telephone2: String
+    egliseId: ID
+  ): Cellule!
+  modifierCellule(
+    id: ID!
+    nom: String
+    quartiersCouvertes: String
+    adresseReunion: String
+    reference: String
+    telephone1: String
+    telephone2: String
+    egliseId: ID
+  ): Cellule!
+  supprimerCellule(id: ID!): Boolean!
+
+  # Departements
+  creerDepartement(nom: String!, responsable: String, mission: String, historique: String): Departement!
+  modifierDepartement(id: ID!, nom: String, responsable: String, mission: String, historique: String): Departement!
+  supprimerDepartement(id: ID!): Boolean!
+}

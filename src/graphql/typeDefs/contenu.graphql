@@ -1,0 +1,411 @@
+# ─── VERSETS DU JOUR ─────────────────────────────────────────
+
+"""
+Verset biblique du jour. Un seul verset peut etre actif a la fois.
+"""
+type VersetJour {
+  id: ID!
+  reference: String!
+  texte: String!
+  meditation: String
+  """Version biblique (ex: LSG, NEG, Bible du Semeur)."""
+  versionBiblique: String!
+  datePublication: DateTime!
+  estActif: Boolean!
+  createdAt: DateTime!
+}
+
+"""
+Reponse paginee pour les versets.
+"""
+type VersetsResponse {
+  items: [VersetJour!]!
+  totalCount: Int!
+}
+
+# ─── EVENEMENTS & PROGRAMMES CULTE ───────────────────────────
+
+enum TypeEvenement {
+  EVENEMENT
+  PROGRAMME_CULTE
+}
+
+enum StatutEvenement {
+  BROUILLON
+  PUBLIE
+  ANNULE
+  TERMINE
+}
+
+"""
+Evenement ou programme de culte de l'eglise.
+"""
+type Evenement {
+  id: ID!
+  type: TypeEvenement!
+  titre: String!
+  description: String
+  dateDebut: DateTime!
+  dateFin: DateTime
+  heure: String
+  lieu: String
+  imageUrl: String
+  imageExterneUrl: String
+  organisateur: String
+  lienYoutube: String
+  statut: StatutEvenement!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""
+Reponse paginee pour les evenements.
+"""
+type EvenementsResponse {
+  items: [Evenement!]!
+  totalCount: Int!
+}
+
+input EvenementInput {
+  type: TypeEvenement = EVENEMENT
+  titre: String!
+  description: String
+  dateDebut: DateTime!
+  dateFin: DateTime
+  heure: String
+  lieu: String
+  imageUrl: String
+  imageExterneUrl: String
+  organisateur: String
+  lienYoutube: String
+  statut: StatutEvenement = BROUILLON
+}
+
+# ─── SERMONS & PLAYLISTS ─────────────────────────────────────
+
+"""
+Playlist regroupant des sermons par serie ou theme.
+"""
+type PlaylistSermon {
+  id: ID!
+  titre: String!
+  description: String
+  theme: String
+  imageUrl: String
+  ordre: Int!
+  sermons: [Sermon!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""
+Reponse paginee pour les playlists.
+"""
+type PlaylistsResponse {
+  items: [PlaylistSermon!]!
+  totalCount: Int!
+}
+
+type Sermon {
+  id: ID!
+  titre: String!
+  description: String
+  predicateur: String
+  date: DateTime!
+  lienYoutube: String!
+  """Miniature extraite automatiquement depuis YouTube."""
+  miniatureUrl: String
+  playlist: PlaylistSermon
+  ordreInPlaylist: Int!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""
+Reponse paginee pour les sermons.
+"""
+type SermonsResponse {
+  items: [Sermon!]!
+  totalCount: Int!
+}
+
+input SermonInput {
+  titre: String!
+  description: String
+  predicateur: String
+  date: DateTime!
+  lienYoutube: String!
+  playlistId: ID
+  ordreInPlaylist: Int = 0
+}
+
+input ReordonnerSermonInput {
+  sermonId: ID!
+  ordre: Int!
+}
+
+# ─── EMISSIONS ───────────────────────────────────────────────
+
+enum TypeEmission {
+  EMISSION_TV
+  EMISSION_RADIO
+}
+
+"""
+Emission television ou radio de l'eglise.
+"""
+type Emission {
+  id: ID!
+  titre: String!
+  description: String
+  date: DateTime!
+  lienYoutube: String
+  mediaUrl: String
+  cloudinaryPublicId: String
+  miniatureUrl: String
+  type: TypeEmission!
+  createdAt: DateTime!
+}
+
+"""
+Reponse paginee pour les emissions.
+"""
+type EmissionsResponse {
+  items: [Emission!]!
+  totalCount: Int!
+}
+
+# ─── SHORT VIDEOS ─────────────────────────────────────────────
+
+"""
+Video courte hebergee sur Cloudinary.
+"""
+type ShortVideo {
+  id: ID!
+  titre: String!
+  description: String
+  """URL de streaming Cloudinary."""
+  videoUrl: String!
+  miniatureUrl: String
+  """URL de telechargement direct (format fl_attachment)."""
+  downloadUrl: String!
+  datePublication: DateTime!
+  createdAt: DateTime!
+}
+
+"""
+Reponse paginee pour les short videos.
+"""
+type ShortVideosResponse {
+  items: [ShortVideo!]!
+  totalCount: Int!
+}
+
+# ─── CULTES ───────────────────────────────────────────────────
+
+enum TypeCulte {
+  MERCREDI
+  VENDREDI
+  SAMEDI
+  DIMANCHE
+  SEMINAIRE
+  CONCERT
+  AUTRE
+}
+
+enum StatutCulte {
+  PLANIFIE
+  EN_DIRECT
+  REDIFFUSION
+}
+
+"""
+Enregistrement d'un culte (passe, present ou futur).
+"""
+type Culte {
+  id: ID!
+  titre: String!
+  description: String
+  type: TypeCulte!
+  date: DateTime!
+  lienYoutube: String
+  miniatureUrl: String
+  statut: StatutCulte!
+  createdAt: DateTime!
+}
+
+"""
+Reponse paginee pour les cultes.
+"""
+type CultesResponse {
+  items: [Culte!]!
+  totalCount: Int!
+}
+
+# ─── CITATIONS ────────────────────────────────────────────────
+
+"""
+Citation spirituelle avec image.
+"""
+type Citation {
+  id: ID!
+  imageUrl: String!
+  texte: String
+  auteur: String
+  description: String
+  createdAt: DateTime!
+}
+
+"""
+Reponse paginee pour les citations.
+"""
+type CitationsResponse {
+  items: [Citation!]!
+  totalCount: Int!
+}
+
+# ─── QUERIES ─────────────────────────────────────────────────
+
+extend type Query {
+  """Retourne le verset du jour actuellement actif. Cache Redis jusqu'a minuit."""
+  getVersetDuJour: VersetJour
+
+  """Liste paginee des versets. Acces administrateurs."""
+  getVersets(search: String, limit: Int = 20, offset: Int = 0): VersetsResponse!
+
+  """Liste paginee des evenements, filtrable par type et statut."""
+  getEvenements(
+    search: String
+    type: TypeEvenement
+    statut: StatutEvenement
+    limit: Int = 20
+    offset: Int = 0
+  ): EvenementsResponse!
+
+  """Retourne les prochains evenements publies dans les 30 prochains jours."""
+  getProchainEvenements(limit: Int = 5): [Evenement!]!
+
+  """Detail d'un evenement par ID."""
+  getEvenementById(id: ID!): Evenement
+
+  """Liste toutes les playlists de sermons avec leurs sermons."""
+  getPlaylists(search: String, limit: Int = 20, offset: Int = 0): PlaylistsResponse!
+
+  """Detail d'une playlist avec ses sermons tries."""
+  getPlaylistById(id: ID!): PlaylistSermon
+
+  """Liste paginee des sermons, filtrable par playlist."""
+  getSermons(search: String, playlistId: ID, limit: Int = 20, offset: Int = 0): SermonsResponse!
+
+  """
+  Retourne le sermon le plus recemment ajoute dans le systeme.
+  Ne correspond pas necessairement au dernier live YouTube.
+  Cache Redis (TTL 1h).
+  """
+  getDernierSermon: Sermon
+
+  """Liste des emissions, filtrable par type."""
+  getEmissions(search: String, type: TypeEmission, limit: Int = 20, offset: Int = 0): EmissionsResponse!
+
+  """
+  Liste des videos courtes, triees par date de publication decroissante.
+  Filtrage optionnel par plage de dates.
+  """
+  getShortVideos(
+    search: String
+    dateDebut: DateTime
+    dateFin: DateTime
+    limit: Int = 20
+    offset: Int = 0
+  ): ShortVideosResponse!
+
+  """Liste des cultes, filtrable par type et statut."""
+  getCultes(
+    search: String
+    type: TypeCulte
+    statut: StatutCulte
+    limit: Int = 20
+    offset: Int = 0
+  ): CultesResponse!
+
+  """
+  Indique si un culte est actuellement en direct.
+  Cache Redis avec TTL de 30 secondes pour un rafraichissement quasi-temps-reel.
+  """
+  estEnDirect: Boolean!
+
+  """Liste paginee des citations."""
+  getCitations(search: String, limit: Int = 20, offset: Int = 0): CitationsResponse!
+}
+
+# ─── MUTATIONS ────────────────────────────────────────────────
+
+extend type Mutation {
+  # Versets
+  creerVerset(
+    reference: String!
+    texte: String!
+    meditation: String
+    versionBiblique: String = "LSG"
+    datePublication: DateTime!
+  ): VersetJour!
+  modifierVerset(id: ID!, reference: String, texte: String, meditation: String, datePublication: DateTime): VersetJour!
+  supprimerVerset(id: ID!): Boolean!
+  """Active le verset specifie et desactive l'ancien automatiquement."""
+  activerVerset(id: ID!): VersetJour!
+
+  # Evenements
+  creerEvenement(input: EvenementInput!): Evenement!
+  modifierEvenement(id: ID!, input: EvenementInput!): Evenement!
+  supprimerEvenement(id: ID!): Boolean!
+
+  # Playlists
+  creerPlaylist(titre: String!, description: String, theme: String, imageUrl: String): PlaylistSermon!
+  modifierPlaylist(id: ID!, titre: String, description: String, theme: String, imageUrl: String): PlaylistSermon!
+  supprimerPlaylist(id: ID!): Boolean!
+
+  # Sermons
+  creerSermon(input: SermonInput!): Sermon!
+  modifierSermon(id: ID!, input: SermonInput!): Sermon!
+  supprimerSermon(id: ID!): Boolean!
+  """Met a jour l'ordre des sermons dans une playlist en une seule transaction."""
+  reordonnerSermons(playlistId: ID!, ordres: [ReordonnerSermonInput!]!): Boolean!
+  """
+  Importe tous les videos d'une playlist YouTube dans le systeme.
+  Necessite la configuration de YOUTUBE_API_KEY.
+  """
+  importerPlaylistYoutube(playlistUrl: String!, playlistId: ID): Int!
+
+  # Emissions
+  creerEmission(titre: String!, description: String, date: DateTime!, lienYoutube: String, mediaUrl: String, cloudinaryPublicId: String, type: TypeEmission!): Emission!
+  modifierEmission(id: ID!, titre: String, description: String, date: DateTime, lienYoutube: String, mediaUrl: String, cloudinaryPublicId: String, type: TypeEmission): Emission!
+  supprimerEmission(id: ID!): Boolean!
+
+  # Cultes
+  creerCulte(titre: String!, description: String, type: TypeCulte!, date: DateTime!, lienYoutube: String): Culte!
+  modifierCulte(id: ID!, titre: String, description: String, type: TypeCulte, date: DateTime, lienYoutube: String, statut: StatutCulte): Culte!
+  supprimerCulte(id: ID!): Boolean!
+
+  # Shorts
+  """
+  Cree un enregistrement ShortVideo apres upload Cloudinary.
+  videoUrl et cloudinaryPublicId sont retournes par /api/upload.
+  """
+  creerShortVideo(
+    titre: String!
+    videoUrl: String!
+    cloudinaryPublicId: String!
+    description: String
+    miniatureUrl: String
+  ): ShortVideo!
+  supprimerShortVideo(id: ID!): Boolean!
+
+  # Citations
+  """
+  Ajoute une citation. Le fichier image est uploade separement via l'endpoint REST /api/upload
+  et l'URL Cloudinary resultante est passee ici.
+  """
+  ajouterCitation(imageUrl: String!, cloudinaryPublicId: String!, texte: String, auteur: String, description: String): Citation!
+  modifierCitation(id: ID!, imageUrl: String, cloudinaryPublicId: String, texte: String, auteur: String, description: String): Citation!
+  supprimerCitation(id: ID!): Boolean!
+}

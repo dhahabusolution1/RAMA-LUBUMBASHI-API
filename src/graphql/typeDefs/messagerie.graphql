@@ -1,0 +1,100 @@
+enum StatutConversation {
+  OUVERTE
+  FERMEE
+}
+
+enum StatutMessage {
+  ENVOYE
+  LU
+}
+
+"""
+Message echange dans une conversation entre un fidele et l'administration.
+"""
+type Message {
+  id: ID!
+  conversationId: ID!
+  expediteur: User!
+  contenu: String!
+  statut: StatutMessage!
+  createdAt: DateTime!
+}
+
+"""
+Canal de communication direct entre un fidele et l'administration.
+Un fidele ne peut avoir qu'une seule conversation active a la fois.
+"""
+type Conversation {
+  id: ID!
+  fidele: User!
+  """Administrateur ayant pris en charge la conversation."""
+  admin: User
+  statut: StatutConversation!
+  messages: [Message!]!
+  """Nombre de messages non lus pour l'utilisateur connecte."""
+  messagesNonLus: Int!
+  updatedAt: DateTime!
+}
+
+type ConversationsPage {
+  items: [Conversation!]!
+  pagination: PaginationInfo!
+}
+
+extend type Query {
+  """
+  Retourne la conversation du fidele connecte avec ses messages.
+  Cree une nouvelle conversation si aucune n'existe.
+  Requiert une authentification (role FIDELE).
+  """
+  maConversation: Conversation!
+
+  """
+  Liste paginee de toutes les conversations. Acces reserve aux administrateurs.
+  """
+  getConversations(
+    statut: StatutConversation
+    limit: Int = 20
+    offset: Int = 0
+  ): ConversationsPage!
+
+  """
+  Retourne les messages pagines d'une conversation.
+  Acces reserve au fidele proprietaire et aux administrateurs.
+  """
+  getMessages(conversationId: ID!, limit: Int = 50, offset: Int = 0): [Message!]!
+}
+
+extend type Mutation {
+  """
+  Envoie un message dans une conversation.
+  Requiert une authentification. Declenche une notification FCM si le destinataire est hors ligne.
+  """
+  envoyerMessage(conversationId: ID!, contenu: String!): Message!
+
+  """
+  Marque tous les messages non lus d'une conversation comme lus.
+  Requiert une authentification.
+  """
+  marquerMessagesLus(conversationId: ID!): Boolean!
+
+  """
+  Ferme une conversation. Acces reserve aux administrateurs.
+  """
+  fermerConversation(conversationId: ID!): Conversation!
+
+  """
+  Assigne un administrateur a une conversation.
+  Acces reserve aux administrateurs.
+  """
+  assignerAdmin(conversationId: ID!, adminId: ID!): Conversation!
+}
+
+extend type Subscription {
+  """
+  Recoit les nouveaux messages en temps reel pour une conversation donnee.
+  Requiert une authentification via le token JWT passe dans connectionParams.
+  Verification que l'abonne est bien participant de la conversation.
+  """
+  nouveauMessage(conversationId: ID!): Message!
+}

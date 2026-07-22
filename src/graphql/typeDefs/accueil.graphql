@@ -1,0 +1,131 @@
+"""
+Reponse aggregee de la page d'accueil mobile.
+Toutes les donnees sont retournees en un seul appel. Cache Redis (TTL 5 min).
+"""
+type AccueilResponse {
+  """Liste des images de bienvenue (slides sur l'accueil)."""
+  imagesAccueil: [ImageAccueil!]!
+  """Programme hebdomadaire des cultes (texte configurable)."""
+  programmeHebdomadaire: String
+  """Déroulement du culte dominical (ordre du service du dimanche)."""
+  programmeDimanche: String
+  """Verset du jour actuellement actif."""
+  versetDuJour: VersetJour
+  """Citation la plus recente."""
+  citationDuJour: Citation
+  """Dernier sermon ajoute dans le systeme (pas necessairement le dernier live)."""
+  dernierSermon: Sermon
+  """Prochains evenements publies (3 max)."""
+  prochainEvenements: [Evenement!]!
+  """Programmes de culte dominicaux a venir."""
+  programmesCulte: [Evenement!]!
+  """Indique si un culte est actuellement en direct."""
+  estEnDirect: Boolean!
+}
+
+"""
+Configuration de la page d'accueil (singleton).
+"""
+type ConfigurationAccueil {
+  programmeHebdomadaire: String
+  programmeDimanche: String
+  imagesAccueil: [ImageAccueil!]!
+}
+
+type ImageAccueil {
+  id: ID!
+  imageUrl: String!
+  cloudinaryPublicId: String!
+  ordre: Int!
+  estActif: Boolean!
+}
+
+input ImageAccueilInput {
+  imageUrl: String!
+  cloudinaryPublicId: String!
+  ordre: Int = 0
+  estActif: Boolean = true
+}
+
+"""
+Entree du journal d'audit — historique des actions administratives.
+"""
+type AuditLog {
+  id: ID!
+  acteur: User!
+  action: String!
+  entite: String!
+  entiteId: String
+  details: JSON
+  createdAt: DateTime!
+}
+
+"""
+KPIs du tableau de bord administrateur. Cache Redis (TTL 5 min).
+"""
+type Dashboard {
+  totalUtilisateurs: Int!
+  totalFideles: Int!
+  totalAdmins: Int!
+  totalEvenementsActifs: Int!
+  totalSermons: Int!
+  totalEglises: Int!
+  totalCellules: Int!
+  totalDepartements: Int!
+  totalShorts: Int!
+  totalRequetesEnAttente: Int!
+  totalRendezVousEnAttente: Int!
+  totalMessagesNonLus: Int!
+  distributionInteractions: [InteractionStat!]!
+  prochainEvenements: [Evenement!]!
+}
+
+type InteractionStat {
+  type: String!
+  total: Int!
+}
+
+extend type Query {
+  """
+  Retourne toutes les donnees de la page d'accueil mobile en un seul appel.
+  Acces public. Cache Redis avec TTL de 5 minutes.
+  Invalide automatiquement si l'un des sous-modules est modifie.
+  """
+  getAccueil: AccueilResponse!
+
+  """
+  Retourne les KPIs et statistiques du tableau de bord administrateur.
+  Acces reserve aux administrateurs. Cache Redis (TTL 5 min).
+  """
+  getDashboard: Dashboard!
+
+  """
+  Retourne le journal d'audit pagine. Acces exclusif au SUPER_ADMIN.
+  """
+  getAuditLogs(
+    entite: String
+    acteurId: ID
+    limit: Int = 20
+    offset: Int = 0
+  ): [AuditLog!]!
+}
+
+extend type Mutation {
+  """
+  Met a jour la configuration de la page d'accueil.
+  Acces exclusif au SUPER_ADMIN. Invalide le cache de la page d'accueil.
+  """
+  modifierConfigurationAccueil(
+    programmeHebdomadaire: String
+    programmeDimanche: String
+    imagesAccueil: [ImageAccueilInput!]
+  ): ConfigurationAccueil!
+}
+
+extend type Subscription {
+  """
+  Notifie les clients web lorsque le statut du culte en direct change.
+  Permet de mettre a jour le bouton Live en temps reel.
+  """
+  statutLiveChange: Culte!
+}

@@ -1,0 +1,489 @@
+### ============================================================
+### CHANGEMENTS RÉCENTS — La Parole Éternelle
+### Fichier REST Client (.http) — Fonctionnalités ajoutées / modifiées
+### Juin 2026
+###
+### 📱 [FIDELE]       → Token Bearer (rôle FIDELE)
+### 🔒 [ADMIN]        → Token Bearer (ADMIN ou SUPER_ADMIN)
+### 🔑 [SUPER_ADMIN]  → Token Bearer (SUPER_ADMIN uniquement)
+### 🌐 [PUBLIC]       → Sans authentification
+### ============================================================
+###
+### Résumé des évolutions couvertes par ce fichier :
+###   1. Dons MaxiCash (PayEntryWeb — redirection navigateur)
+###   2. Config accueil — programme du dimanche et lien d'intégration WhatsApp
+###   3. Demandes de prière — filtre typePriere (MOI / AUTRE)
+###   4. Citations — image seule (sans texte ni auteur)
+###   5. Inscription fidèle — correctif numéro WhatsApp
+###   6. Identification membre — capture, date adhésion, champs antenne simplifiés, départements/fonctions facultatifs, n° de matricule automatique
+###   7. Rendez-vous pasteurs — créneaux désactivés, envoi corrigé, notification acceptation
+###   8. Demandes d'intégration — statuts limités, récupération du lien WhatsApp, saisie ou sélection de l'église d'origine facultative (commun à tous les types)
+###
+### Prérequis : backend sur http://localhost:4000
+### Remplacer @token par un JWT valide après connexion.
+
+@graphql_url = http://localhost:4000/graphql
+@api_url = http://localhost:4000/api
+@token = VOTRE_TOKEN_ICI
+
+
+# ═══════════════════════════════════════════════════════════════
+# 1. DONS — MaxiCash PayEntryWeb
+# ═══════════════════════════════════════════════════════════════
+# Flux mobile :
+#   initierDon → paymentUrl → WebView MaxiCash → retour / webhook
+#   Puis getDonParReference pour le statut final.
+# Variables d'env backend : MAXICASH_MERCHANT_ID, MAXICASH_MERCHANT_PASSWORD,
+#   MAXICASH_SANDBOX, APP_PUBLIC_URL, DON_APP_DEEP_LINK_BASE
+
+### 📱 [FIDELE] Initier un don (retourne l'URL de la passerelle)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation InitierDon($input: InitierDonInput!) { initierDon(input: $input) { transactionId reference paymentUrl statut } }",
+  "variables": {
+    "input": {
+      "montant": 5000,
+      "devise": "CDF",
+      "message": "Offrande culte du dimanche",
+      "telephone": "+243991234567"
+    }
+  }
+}
+
+### 📱 [FIDELE] Vérifier le statut après retour WebView
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query GetDonParReference($reference: String!) { getDonParReference(reference: $reference) { id montant devise statut reference message logId updatedAt } }",
+  "variables": {
+    "reference": "LPE-DON-REMPLACER_PAR_REFERENCE"
+  }
+}
+
+### 📱 [FIDELE] Historique de mes dons
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query GetMesDons($limit: Int, $offset: Int) { getMesDons(limit: $limit, offset: $offset) { totalCount items { id montant devise statut reference message createdAt } } }",
+  "variables": {
+    "limit": 20,
+    "offset": 0
+  }
+}
+
+### 🔒 [ADMIN] Liste des dons reçus (suivi admin)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query GetDonsAdmin($statut: StatutDon, $limit: Int, $offset: Int) { getDonsAdmin(statut: $statut, limit: $limit, offset: $offset) { totalCount items { id montant devise statut reference telephonePayeur message logId createdAt user { id nom prenom numeroWhatsapp } } } }",
+  "variables": {
+    "statut": "REUSSI",
+    "limit": 50,
+    "offset": 0
+  }
+}
+
+### 🔒 [ADMIN] Détail d'un don par ID
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query GetDon($id: ID!) { getDon(id: $id) { id montant devise statut reference telephonePayeur message logId maxicashTransactionId createdAt updatedAt user { nom prenom numeroWhatsapp } } }",
+  "variables": {
+    "id": "REMPLACER_PAR_ID_DON"
+  }
+}
+
+### 🌐 [PUBLIC] Page de retour succès (redirection MaxiCash)
+GET {{api_url}}/dons/retour/success?reference=LPE-DON-EXEMPLE
+
+### 🌐 [PUBLIC] Page de retour échec
+GET {{api_url}}/dons/retour/echec?reference=LPE-DON-EXEMPLE
+
+### 🌐 [PUBLIC] Page de retour annulation
+GET {{api_url}}/dons/retour/annulation?reference=LPE-DON-EXEMPLE
+
+### 🌐 [PUBLIC] Webhook notify MaxiCash (appel serveur MaxiCash, pas le mobile)
+GET {{api_url}}/dons/maxicash/notify?reference=LPE-DON-EXEMPLE&Status=success
+
+
+# ═══════════════════════════════════════════════════════════════
+# 2. CONFIG ACCUEIL — Programme du dimanche
+# ═══════════════════════════════════════════════════════════════
+# Nouveau champ : programmeDimanche (ordre du culte dominical)
+# Distinct de programmeHebdomadaire (activités de la semaine)
+# Exposé dans getAccueil pour l'app mobile.
+
+### 🌐 [PUBLIC] Accueil mobile (inclut programmeDimanche)
+POST {{graphql_url}}
+Content-Type: application/json
+
+{
+  "query": "query GetAccueil { getAccueil { programmeHebdomadaire programmeDimanche imagesAccueil { id imageUrl ordre estActif } versetDuJour { reference texte } citationDuJour { id imageUrl } estEnDirect } }"
+}
+
+### 🔑 [SUPER_ADMIN] Modifier la config accueil (programme hebdo + dimanche + images)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation ModifierConfigurationAccueil($programmeHebdomadaire: String, $programmeDimanche: String, $imagesAccueil: [ImageAccueilInput!]) { modifierConfigurationAccueil(programmeHebdomadaire: $programmeHebdomadaire, programmeDimanche: $programmeDimanche, imagesAccueil: $imagesAccueil) { programmeHebdomadaire programmeDimanche imagesAccueil { id imageUrl ordre estActif } } }",
+  "variables": {
+    "programmeHebdomadaire": "Mercredi — Culte de prière 18h30\nVendredi — Louange 19h\nDimanche — Cultes 8h30 & 10h30",
+    "programmeDimanche": "08h30 — Accueil et intercession\n09h00 — Louange & adoration\n09h45 — Lecture biblique\n10h00 — Sermon\n11h00 — Sainte Cène\n11h30 — Annonces & bénédictions",
+    "imagesAccueil": []
+  }
+}
+
+
+# ═══════════════════════════════════════════════════════════════
+# 2B. CONFIGURATION WHATSAPP — Paramètres techniques & WhatsApp (Schéma séparé)
+# ═══════════════════════════════════════════════════════════════
+# Schéma isolé pour découpler la configuration réseau de la page d'accueil d'affichage.
+
+### 🌐 [PUBLIC] Obtenir les liens d'intégration et Bookshop de l'application
+POST {{graphql_url}}
+Content-Type: application/json
+
+{
+  "query": "query GetConfigurationWhatsApp { getConfigurationWhatsApp { lienGroupeWhatsapp numeroWhatsappBookshop } }"
+}
+
+### 🔑 [SUPER_ADMIN] Modifier la configuration WhatsApp (Groupe WhatsApp + Bookshop)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation ModifierConfigurationWhatsApp($lienGroupeWhatsapp: String, $numeroWhatsappBookshop: String) { modifierConfigurationWhatsApp(lienGroupeWhatsapp: $lienGroupeWhatsapp, numeroWhatsappBookshop: $numeroWhatsappBookshop) { lienGroupeWhatsapp numeroWhatsappBookshop } }",
+  "variables": {
+    "lienGroupeWhatsapp": "https://chat.whatsapp.com/GueStGroupForIntegrationLPE",
+    "numeroWhatsappBookshop": "0999999999"
+  }
+}
+
+
+# ═══════════════════════════════════════════════════════════════
+# 3. DEMANDES DE PRIÈRE — typePriere (MOI / AUTRE)
+# ═══════════════════════════════════════════════════════════════
+# Le mobile envoie typePriere à la soumission.
+# L'admin peut filtrer getRequetes par typePriere.
+# typePriere obligatoire si type = PRIERE.
+
+### 📱 [FIDELE] Soumettre une prière pour soi-même
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation SoumettreRequete($input: RequeteInput!) { soumettreRequete(input: $input) { id type typePriere statut dateDemande message } }",
+  "variables": {
+    "input": {
+      "type": "PRIERE",
+      "message": "Je demande la guérison de ma famille.",
+      "typePriere": "MOI",
+      "estMembre": true
+    }
+  }
+}
+
+### 📱 [FIDELE] Soumettre une prière pour autrui
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation SoumettreRequete($input: RequeteInput!) { soumettreRequete(input: $input) { id type typePriere statut dateDemande message } }",
+  "variables": {
+    "input": {
+      "type": "PRIERE",
+      "message": "Prière pour ma mère hospitalisée.",
+      "typePriere": "AUTRE",
+      "estMembre": true
+    }
+  }
+}
+
+### 🔒 [ADMIN] Lister les prières — filtre par typePriere
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query GetRequetes($type: TypeRequete, $statut: StatutRequete, $typePriere: TypeDemandePriere, $limit: Int, $offset: Int) { getRequetes(type: $type, statut: $statut, typePriere: $typePriere, limit: $limit, offset: $offset) { items { id type statut typePriere message dateDemande estMembre user { nom prenom numeroWhatsapp } } pagination { total hasNextPage } } }",
+  "variables": {
+    "type": "PRIERE",
+    "typePriere": "AUTRE",
+    "statut": null,
+    "limit": 20,
+    "offset": 0
+  }
+}
+
+### 🔒 [ADMIN] Détail d'une demande de prière
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query GetRequeteById($id: ID!) { getRequeteById(id: $id) { id type statut typePriere message estMembre dateDemande user { nom prenom numeroWhatsapp } } }",
+  "variables": {
+    "id": "REMPLACER_PAR_ID_REQUETE"
+  }
+}
+
+
+# ═══════════════════════════════════════════════════════════════
+# 4. CITATIONS — Image seule (sans texte ni auteur)
+# ═══════════════════════════════════════════════════════════════
+# Le contenu textuel est intégré dans l'image.
+# Workflow : upload REST → ajouterCitation(imageUrl, cloudinaryPublicId)
+
+### [REST] Upload image citation (prérequis)
+POST {{api_url}}/upload
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----Boundary
+
+------Boundary
+Content-Disposition: form-data; name="folder"
+
+citations
+------Boundary
+Content-Disposition: form-data; name="file"; filename="citation.jpg"
+Content-Type: image/jpeg
+
+< ./chemin/vers/citation.jpg
+------Boundary--
+
+### 🔒 [ADMIN] Lister les citations (image + date uniquement)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query GetCitations($limit: Int, $offset: Int) { getCitations(limit: $limit, offset: $offset) { items { id imageUrl createdAt } totalCount } }",
+  "variables": {
+    "limit": 12,
+    "offset": 0
+  }
+}
+
+### 🔒 [ADMIN] Ajouter une citation (image seule)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation AjouterCitation($imageUrl: String!, $cloudinaryPublicId: String!) { ajouterCitation(imageUrl: $imageUrl, cloudinaryPublicId: $cloudinaryPublicId) { id imageUrl createdAt } }",
+  "variables": {
+    "imageUrl": "https://res.cloudinary.com/VOTRE_CLOUD/image/upload/v1/parole-eternelle/citations/exemple.jpg",
+    "cloudinaryPublicId": "parole-eternelle/citations/exemple"
+  }
+}
+
+### 🔒 [ADMIN] Modifier l'image d'une citation
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation ModifierCitation($id: ID!, $imageUrl: String, $cloudinaryPublicId: String) { modifierCitation(id: $id, imageUrl: $imageUrl, cloudinaryPublicId: $cloudinaryPublicId) { id imageUrl createdAt } }",
+  "variables": {
+    "id": "REMPLACER_PAR_ID_CITATION",
+    "imageUrl": "https://res.cloudinary.com/VOTRE_CLOUD/image/upload/v1/parole-eternelle/citations/nouvelle.jpg",
+    "cloudinaryPublicId": "parole-eternelle/citations/nouvelle"
+  }
+}
+
+### 🔒 [ADMIN] Supprimer une citation
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation SupprimerCitation($id: ID!) { supprimerCitation(id: $id) }",
+  "variables": {
+    "id": "REMPLACER_PAR_ID_CITATION"
+  }
+}
+
+
+# ═══════════════════════════════════════════════════════════════
+# 5. INSCRIPTION FIDÈLE — correctif numéro WhatsApp
+# ═══════════════════════════════════════════════════════════════
+# Le backend normalise 0XXXXXXXXX → +243XXXXXXXXX et ignore les comptes soft-deleted.
+# Formats acceptés à l'inscription : +243991234567 ou 0991234567
+
+### 🌐 [PUBLIC] Inscription fidèle
+POST {{graphql_url}}
+Content-Type: application/json
+
+{
+  "query": "mutation RegisterFidele($input: RegisterInput!) { registerFidele(input: $input) { accessToken refreshToken user { id nom numeroWhatsapp role } } }",
+  "variables": {
+    "input": {
+      "nom": "Mukendi",
+      "postnom": "Kabongo",
+      "prenom": "Jean",
+      "numeroWhatsapp": "0812345678",
+      "motDePasse": "MonMotDePasse8!"
+    }
+  }
+}
+
+
+# ═══════════════════════════════════════════════════════════════
+# 6. IDNETIFICATION MEMBRE — pré-génération matricule (admin) & enrôlement (fidèle)
+# ═══════════════════════════════════════════════════════════════
+# Étape 1 : l'admin pré-génère un matricule vide destiné à être communiqué au membre.
+# Étape 2 : le fidèle vérifie l'existence et la validité du matricule reçu (verifierMatriculeEnrolement).
+# Étape 3 : le fidèle soumet son formulaire d'un seul coup qui fusionne et peuple ce matricule vide (soumettreInscription).
+
+### 🔒 [ADMIN] Pré-générer un numéro matricule vide (réserve le matricule et la carte)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation PreGenererMatricule($sessionId: ID!) { preGenererMatricule(sessionId: $sessionId) { id matricule numeroCarteMembre statut } }",
+  "variables": {
+    "sessionId": "ID_SESSION_MEMBRE_ICI"
+  }
+}
+
+### 📱 [FIDELE] Vérifier la validité du matricule reçu par le secrétariat (avant d'ouvrir le formulaire)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query VerifierMatriculeEnrolement($matricule: String!) { verifierMatriculeEnrolement(matricule: $matricule) }",
+  "variables": {
+    "matricule": "LPE-2026-0005"
+  }
+}
+
+### 📱 [FIDELE] Soumettre la fiche d'identification (Lie au matricule pré-généré, valide directement)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation SoumettreInscriptionMembre($input: InscriptionSessionInput!) { soumettreInscription(input: $input) { id statut dateAdhesion captureFicheUrl matricule numeroCarteMembre } }",
+  "variables": {
+    "input": {
+      "sessionFormulaireId": "ID_SESSION_MEMBRE_ICI",
+      "matriculeSaisi": "LPE-2026-0005",
+      "profilMembre": {
+        "sexe": "FEMININ",
+        "dateNaissance": "1995-03-15",
+        "lieuNaissance": "Lubumbashi",
+        "etatCivil": "CELIBATAIRE",
+        "adressePhysique": "Av. Kasai 45, Q. Kenya",
+        "egliseNom": "Église Évangélique La Grâce — Lubumbashi",
+        "dateAdhesion": "2024-06-01",
+        "captureFicheUrl": "https://res.cloudinary.com/.../inscriptions/xxx.jpg",
+        "captureFichePublicId": "parole-eternelle/inscriptions/xxx",
+        "departements": [
+          {
+            "departementId": "REMPLACER_PAR_UUID_DEPARTEMENT"
+          }
+        ]
+      }
+    }
+  }
+}
+
+
+# ═══════════════════════════════════════════════════════════════
+# 7. RENDEZ-VOUS PASTORAUX — créneaux + envoi + notification
+# ═══════════════════════════════════════════════════════════════
+# Mobile : utiliser creneaux[].disponible ou heuresPrises pour désactiver les créneaux pris.
+# getDisponibilitesPeriode pour griser les dates complètes (estComplet).
+# Notification push envoyée au fidèle quand l'admin passe le statut à CONFIRME.
+
+### 🌐 [PUBLIC] Disponibilité d'un jour (créneaux détaillés)
+POST {{graphql_url}}
+Content-Type: application/json
+
+{
+  "query": "query { getDisponibiliteJour(date: \"2026-07-15\") { estComplet heuresDisponibles heuresPrises creneaux { heure disponible } } }"
+}
+
+### 🌐 [PUBLIC] Calendrier mensuel
+POST {{graphql_url}}
+Content-Type: application/json
+
+{
+  "query": "query($d1: Date!, $d2: Date!) { getDisponibilitesPeriode(dateDebut: $d1, dateFin: $d2) { date estComplet slotsRestants } }",
+  "variables": { "d1": "2026-07-01", "d2": "2026-07-31" }
+}
+
+### 📱 [FIDELE] Prendre un rendez-vous (motif obligatoire)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation($date: Date!, $heure: String!, $motif: String!) { prendreRendezVous(date: $date, heure: $heure, motif: $motif) { id date heure motif statut } }",
+  "variables": { "date": "2026-07-15", "heure": "10:00", "motif": "Besoin de conseils spirituels" }
+}
+
+### 🔒 [ADMIN] Accepter un rendez-vous → notification push au fidèle
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation($id: ID!) { updateStatutRendezVous(id: $id, statut: CONFIRME) { id statut } }",
+  "variables": { "id": "ID_RDV_ICI" }
+}
+
+
+# ═══════════════════════════════════════════════════════════════
+# 8. SÉLECTION OU SAISIE LIBRE DE L'ÉGLISE (Renouvellement, Intégration, Salut, Baptême)
+# ═══════════════════════════════════════════════════════════════
+# L'utilisateur peut au choix :
+#  1. Fournir egliseId (sélection d'une église préexistante du réseau)
+#  2. Fournir egliseNom (saisie manuelle libre de l'église d'origine)
+
+### 📱 [FIDELE] Intégration avec église saisie à la main (libre)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation($input: RequeteInput!) { soumettreRequete(input: $input) { id type egliseNom lienGroupeIntegration statut } }",
+  "variables": {
+    "input": {
+      "type": "INTEGRATION",
+      "egliseNom": "Église Locale de la Rédemption — Kipushi"
+    }
+  }
+}
+
+### 📱 [FIDELE] Renouvellement d'engagement avec église sélectionnée (ID)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation($input: RequeteInput!) { soumettreRequete(input: $input) { id type egliseNom eglise { id nom } statut } }",
+  "variables": {
+    "input": {
+      "type": "RENOUVELLEMENT",
+      "egliseId": "REMPLACER_PAR_UUID_VALIDE_EGLISE_EXISTANTE"
+    }
+  }
+}

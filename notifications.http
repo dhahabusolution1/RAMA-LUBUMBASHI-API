@@ -1,0 +1,88 @@
+### ============================================================
+### TESTS DU SYSTÈME DE NOTIFICATIONS PERSISTÉES & PUSH
+### La Parole Éternelle — Flux de Notifications (FCM + Base de données)
+### ============================================================
+
+@graphql_url = http://localhost:4000/graphql
+@token = VOTRE_TOKEN_ICI
+
+
+# ═══════════════════════════════════════════════════════════════
+# 1. FLUX UTILISATEUR (Fidèle connecté)
+# ═══════════════════════════════════════════════════════════════
+
+### 📱 Récupérer ma boîte de réception de notifications (Historique trié par date)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query MesNotifications($limit: Int, $offset: Int) { mesNotifications(limit: $limit, offset: $offset) { id titre corps lu type metaId createdAt } }",
+  "variables": {
+    "limit": 10,
+    "offset": 0
+  }
+}
+
+### 📱 Obtenir le nombre de notifications non lues (Badge rouge de l'application)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query NombreNotificationsNonLues { nombreNotificationsNonLues }"
+}
+
+### 📱 Marquer une notification spécifique comme "Lue" (clic sur la notification)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation MarquerNotificationLue($id: ID!) { marquerNotificationLue(id: $id) { id lu } }",
+  "variables": {
+    "id": "METTRE_ICI_UN_ID_DE_NOTIFICATION"
+  }
+}
+
+### 📱 Marquer toutes mes notifications comme "Lues" d'un seul coup
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation MarquerToutesNotificationsLues { marquerToutesNotificationsLues }"
+}
+
+
+# ═══════════════════════════════════════════════════════════════
+# 2. ENVOI MANUEL (Administrateur d'église / Rôle Super_Admin)
+# ═══════════════════════════════════════════════════════════════
+
+### 🔑 d'envoi ciblé à TOUS les appareils enregistrés (Annonces globales)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation EnvoyerNotification($titre: String!, $corps: String!, $cible: CibleNotification!) { envoyerNotification(titre: $titre, corps: $corps, cible: $cible) }",
+  "variables": {
+    "titre": "Urgent : Culte exceptionnel de ce dimanche",
+    "corps": "Message de l'administration : Le culte débutera exceptionnellement à 08h30. Soyez bénis !",
+    "cible": "TOUS"
+  }
+}
+
+### 🔑 d'envoi ciblé spécifiquement aux COMPTES FIDÈLES enregistrés
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation EnvoyerNotification($titre: String!, $corps: String!, $cible: CibleNotification!) { envoyerNotification(titre: $titre, corps: $corps, cible: $cible) }",
+  "variables": {
+    "titre": "Ouverture d'une nouvelle session de Baptême !",
+    "corps": "Bien-aimé, les inscriptions pour la session de baptême de juillet sont désormais ouvertes dans l'application.",
+    "cible": "FIDELES"
+  }
+}

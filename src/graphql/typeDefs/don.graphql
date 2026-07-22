@@ -1,0 +1,92 @@
+enum StatutDon {
+  EN_ATTENTE
+  EN_COURS
+  REUSSI
+  ECHEC
+  ANNULE
+}
+
+"""
+Transaction de don initiée depuis l'application mobile et finalisée sur la passerelle MaxiCash.
+"""
+type DonateurResume {
+  id: ID!
+  nom: String!
+  prenom: String
+  numeroWhatsapp: String
+}
+
+type DonTransaction {
+  id: ID!
+  montant: Decimal!
+  devise: Devise!
+  reference: String!
+  statut: StatutDon!
+  message: String
+  telephonePayeur: String
+  logId: String
+  maxicashTransactionId: String
+  user: DonateurResume
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type DonsResponse {
+  items: [DonTransaction!]!
+  totalCount: Int!
+}
+
+"""
+Réponse après initiation d'un don — le mobile ouvre paymentUrl dans un navigateur ou WebView.
+"""
+type InitierDonResponse {
+  transactionId: ID!
+  reference: String!
+  paymentUrl: String!
+  statut: StatutDon!
+}
+
+input InitierDonInput {
+  montant: Decimal!
+  devise: Devise = CDF
+  message: String
+  """
+  Numéro Mobile Money / MaxiCash du payeur (ex. +243...).
+  Par défaut : numéro WhatsApp du compte connecté.
+  """
+  telephone: String
+}
+
+extend type Query {
+  """
+  Historique des dons de l'utilisateur connecté.
+  """
+  getMesDons(limit: Int = 20, offset: Int = 0): DonsResponse!
+
+  """
+  Détail d'une transaction de don (propriétaire ou admin).
+  """
+  getDon(id: ID!): DonTransaction
+
+  """
+  Suivi après retour de la WebView MaxiCash.
+  """
+  getDonParReference(reference: String!): DonTransaction
+
+  """
+  Liste des dons reçus (administration).
+  """
+  getDonsAdmin(
+    statut: StatutDon
+    limit: Int = 50
+    offset: Int = 0
+  ): DonsResponse!
+}
+
+extend type Mutation {
+  """
+  Étape 1 du flux MaxiCash PayEntryWeb : crée la transaction et renvoie l'URL de la passerelle.
+  Le mobile doit ouvrir paymentUrl (WebView ou navigateur externe).
+  """
+  initierDon(input: InitierDonInput!): InitierDonResponse!
+}

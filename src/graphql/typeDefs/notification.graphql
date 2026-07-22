@@ -1,0 +1,47 @@
+enum CibleNotification {
+  TOUS
+  FIDELES
+}
+
+type Notification {
+  id: ID!
+  userId: ID
+  telephoneDest: String
+  titre: String!
+  corps: String!
+  lu: Boolean!
+  type: String!
+  metaId: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+extend type Query {
+  """
+  Récupère les notifications persistées pour l'utilisateur connecté (rôle FIDELE ou ADMIN).
+  """
+  mesNotifications(limit: Int, offset: Int): [Notification!]!
+
+  """
+  Compte le nombre de notifications non lues pour l'utilisateur connecté.
+  """
+  nombreNotificationsNonLues: Int!
+}
+
+extend type Mutation {
+  """
+  Envoie une notification push manuelle (Réservé au SUPER_ADMIN).
+  Retourne le nombre de notifications envoyées avec succès.
+  """
+  envoyerNotification(titre: String!, corps: String!, cible: CibleNotification!): Int!
+
+  """
+  Marque une notification comme lue.
+  """
+  marquerNotificationLue(id: ID!): Notification!
+
+  """
+  Marque toutes les notifications de l'utilisateur comme lues.
+  """
+  marquerToutesNotificationsLues: Boolean!
+}

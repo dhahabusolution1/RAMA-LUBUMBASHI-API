@@ -1,0 +1,1818 @@
+### ============================================================
+### La Parole Éternelle v2 — API GraphQL — Tests HTTP
+### ============================================================
+###
+### Prérequis : Extension "REST Client" (Huachao Mao) dans VS Code.
+###
+### UTILISATION :
+###   1. Démarrer le backend : npm run dev
+###   2. Renseigner les variables ci-dessous (@baseUrl, @accessToken, etc.)
+###   3. Cliquer sur "Send Request" au-dessus de chaque requête.
+###
+### CONVENTION DES SECTIONS :
+###   - Les requêtes PUBLIC ne nécessitent aucun token.
+###   - Les requêtes AUTH nécessitent @accessTokenFidele.
+###   - Les requêtes ADMIN nécessitent @accessTokenAdmin.
+###   - Les requêtes SUPER_ADMIN nécessitent @accessTokenSuperAdmin.
+###
+### FLUX RECOMMANDÉ POUR LES TESTS :
+###   1. Section 1 : Inscrire un fidèle → copier le accessToken
+###   2. Section 2 : Connecter un admin → copier le accessToken
+###   3. Utiliser les tokens obtenus pour les sections suivantes.
+### ============================================================
+
+# ─── VARIABLES GLOBALES ──────────────────────────────────────
+@baseUrl = http://localhost:4000/graphql
+@contentType = application/json
+
+# Remplacer par les tokens obtenus après connexion
+@accessTokenFidele = REMPLACER_PAR_TOKEN_FIDELE
+@accessTokenAdmin = REMPLACER_PAR_TOKEN_ADMIN
+@accessTokenSuperAdmin = REMPLACER_PAR_TOKEN_SUPER_ADMIN
+
+# IDs à remplacer après création des ressources
+@idEglise = REMPLACER_PAR_ID_EGLISE
+@idVerset = REMPLACER_PAR_ID_VERSET
+@idEvenement = REMPLACER_PAR_ID_EVENEMENT
+@idSermon = REMPLACER_PAR_ID_SERMON
+@idPlaylist = REMPLACER_PAR_ID_PLAYLIST
+@idCulte = REMPLACER_PAR_ID_CULTE
+@idRequete = REMPLACER_PAR_ID_REQUETE
+@idRendezVous = REMPLACER_PAR_ID_RENDEZVOUS
+@idConversation = REMPLACER_PAR_ID_CONVERSATION
+@idLivre = REMPLACER_PAR_ID_LIVRE
+@idCitation = REMPLACER_PAR_ID_CITATION
+@idCellule = REMPLACER_PAR_ID_CELLULE
+@idUser = REMPLACER_PAR_ID_USER
+
+
+### ============================================================
+### ░░░  SECTION 0 — SANTÉ DU SERVEUR  ░░░
+### ============================================================
+
+### [PUBLIC] Vérification de l'état du serveur
+### Vérifie que la base de données et Redis sont joignables.
+GET http://localhost:4000/health
+
+
+### ============================================================
+### ░░░  SECTION 1 — AUTHENTIFICATION (MODULE 1)  ░░░
+### ============================================================
+###
+### Deux flux distincts :
+###   - Fidèle : numéro WhatsApp + mot de passe → app mobile
+###   - Admin  : email + mot de passe → interface web
+###
+### Les tokens retournés ont une durée de vie :
+###   - accessToken  : 15 minutes
+###   - refreshToken : 30 jours (à stocker côté client pour renouveler)
+
+### [PUBLIC] Inscription d'un fidèle
+### Crée un compte avec le rôle FIDELE.
+### Retourne accessToken + refreshToken immédiatement (pas de validation email).
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "mutation RegisterFidele($input: RegisterInput!) { registerFidele(input: $input) { accessToken refreshToken user { id nom role } } }",
+  "variables": {
+    "input": {
+      "nom": "Mukendi",
+      "postnom": "Kabongo",
+      "prenom": "Jean",
+      "numeroWhatsapp": "+243812345678",
+      "motDePasse": "monMotDePasse123"
+    }
+  }
+}
+
+###
+
+### [PUBLIC] Connexion d'un fidèle
+### Retourne un nouveau pair accessToken / refreshToken.
+### Copier le accessToken dans @accessTokenFidele ci-dessus.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "mutation LoginFidele($numero: String!, $mdp: String!) { loginFidele(numeroWhatsapp: $numero, motDePasse: $mdp) { accessToken refreshToken user { id nom role } } }",
+  "variables": {
+    "numero": "+243812345678",
+    "mdp": "monMotDePasse123"
+  }
+}
+
+###
+
+### [PUBLIC] Connexion d'un administrateur
+### Seuls les comptes ADMIN ou SUPER_ADMIN peuvent utiliser cette mutation.
+### Copier le accessToken dans @accessTokenAdmin ou @accessTokenSuperAdmin.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "mutation LoginAdmin($email: String!, $mdp: String!) { loginAdmin(email: $email, motDePasse: $mdp) { accessToken refreshToken user { id nom role } } }",
+  "variables": {
+    "email": "admin@parole-eternelle.cd",
+    "mdp": "AdminSecure123!"
+  }
+}
+
+###
+
+### [PUBLIC] Renouvellement du token d'accès
+### Le refreshToken utilisé est invalidé — un nouveau pair est émis.
+### Utiliser le refreshToken obtenu lors de la connexion.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "mutation RefreshToken($token: String!) { refreshToken(refreshToken: $token) { accessToken refreshToken } }",
+  "variables": {
+    "token": "REMPLACER_PAR_REFRESH_TOKEN"
+  }
+}
+
+###
+
+### [AUTH] Mise à jour du profil fidèle
+### Seuls les champs fournis sont modifiés. photoUrl = URL Cloudinary
+### obtenue après un upload via POST /api/upload/image.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenFidele}}
+
+{
+  "query": "mutation UpdateProfil($input: UpdateProfilInput!) { updateProfil(input: $input) { id nom postnom prenom photoUrl numeroWhatsapp } }",
+  "variables": {
+    "input": {
+      "nom": "Mukendi",
+      "postnom": "Kabongo",
+      "prenom": "Jean-Pierre",
+      "photoUrl": "https://res.cloudinary.com/demo/image/upload/sample.jpg"
+    }
+  }
+}
+
+###
+
+### [AUTH] Changement de mot de passe
+### L'ancien mot de passe est requis pour confirmer l'identité.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenFidele}}
+
+{
+  "query": "mutation ChangeMotDePasse($ancien: String!, $nouveau: String!) { changeMotDePasse(ancienMotDePasse: $ancien, nouveauMotDePasse: $nouveau) }",
+  "variables": {
+    "ancien": "monMotDePasse123",
+    "nouveau": "NouveauMotDePasse456!"
+  }
+}
+
+###
+
+### [AUTH] Enregistrement du token FCM de l'appareil
+### À appeler au démarrage de l'app mobile pour recevoir les notifications push.
+### Fonctionne aussi sans token (visiteur anonyme) — passer null ou omettre l'en-tête.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenFidele}}
+
+{
+  "query": "mutation UpdateFcmToken($token: String!, $plateforme: Plateforme!) { updateFcmToken(token: $token, plateforme: $plateforme) }",
+  "variables": {
+    "token": "fcm_device_token_xxxxxxxxxxxxxxxx",
+    "plateforme": "ANDROID"
+  }
+}
+
+
+### ============================================================
+### ░░░  SECTION 2 — ACCUEIL & TABLEAU DE BORD (MODULES 2 & 26)  ░░░
+### ============================================================
+###
+### getAccueil : agrégateur principal de l'app mobile.
+###   Retourne en UN seul appel tout ce qu'il faut pour afficher l'écran d'accueil.
+###   Cache Redis TTL 5 minutes — invalide automatiquement si un contenu change.
+###
+### getDashboard : KPIs pour l'interface web admin.
+###   Cache Redis TTL 5 minutes.
+
+### [PUBLIC] Page d'accueil mobile — agrégateur
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "query GetAccueil { getAccueil { imagesAccueil { id imageUrl ordre estActif } programmeHebdomadaire estEnDirect versetDuJour { id reference texte versionBiblique } citationDuJour { id imageUrl auteur texte } dernierSermon { id titre predicateur lienYoutube miniatureUrl } prochainEvenements { id titre dateDebut dateFin heure lieu statut } programmesCulte { id titre dateDebut dateFin heure lieu } } }"
+}
+
+###
+
+### [ADMIN] Tableau de bord administrateur
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "query GetDashboard { getDashboard { totalUtilisateurs totalFideles totalAdmins totalEvenementsActifs totalSermons activitesRecentes { id action entite createdAt acteur { nom } } prochainEvenements { id titre date statut } } }"
+}
+
+###
+
+### [SUPER_ADMIN] Mise à jour de la configuration d'accueil
+### messagesAccueil : remplace toute la liste des slides de bienvenue.
+### programmeHebdomadaire : texte libre affiché sur l'accueil mobile.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenSuperAdmin}}
+
+{
+  "query": "mutation ModifierConfigAccueil($prog: String, $imgs: [ImageAccueilInput!]) { modifierConfigurationAccueil(programmeHebdomadaire: $prog, imagesAccueil: $imgs) { programmeHebdomadaire imagesAccueil { id imageUrl ordre estActif } } }",
+  "variables": {
+    "prog": "Culte dominical : Dimanche 09h00 | Culte de prière : Mercredi 18h00 | Culte de jeûne : Vendredi 06h00",
+    "imgs": [
+      {
+        "imageUrl": "https://res.cloudinary.com/parole-eternelle/image/upload/accueil1.jpg",
+        "cloudinaryPublicId": "accueil1",
+        "ordre": 0,
+        "estActif": true
+      }
+    ]
+  }
+}
+
+###
+
+### [SUPER_ADMIN] Journal d'audit (10 dernières actions)
+### Filtrable par entite (ex: "Evenement") et par acteurId.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenSuperAdmin}}
+
+{
+  "query": "query GetAuditLogs($entite: String, $limit: Int) { getAuditLogs(entite: $entite, limit: $limit) { id action entite entiteId createdAt acteur { id nom role } details } }",
+  "variables": {
+    "entite": null,
+    "limit": 10
+  }
+}
+
+
+### ============================================================
+### ░░░  SECTION 3 — GESTION DES UTILISATEURS (MODULE 3)  ░░░
+### ============================================================
+###
+### ADMIN : lecture et suppression.
+### SUPER_ADMIN : tout (création, changement de rôle).
+
+### [ADMIN] Liste paginée des utilisateurs
+### search : filtre sur nom ou numéro WhatsApp.
+### role : filtre sur FIDELE, ADMIN ou SUPER_ADMIN.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "query GetUtilisateurs($search: String, $role: Role, $limit: Int, $offset: Int) { getUtilisateurs(search: $search, role: $role, limit: $limit, offset: $offset) { items { id nom postnom prenom email numeroWhatsapp role createdAt } pagination { total count limit offset hasNextPage } } }",
+  "variables": {
+    "search": null,
+    "role": null,
+    "limit": 20,
+    "offset": 0
+  }
+}
+
+###
+
+### [ADMIN] Détail d'un utilisateur par ID
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "query GetUtilisateurById($id: ID!) { getUtilisateurById(id: $id) { id nom postnom prenom email numeroWhatsapp photoUrl role createdAt } }",
+  "variables": {
+    "id": "{{idUser}}"
+  }
+}
+
+###
+
+### [SUPER_ADMIN] Créer un compte administrateur
+### Utilisé pour onboarder un nouvel admin sans passer par l'app mobile.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenSuperAdmin}}
+
+{
+  "query": "mutation CreerCompteAdmin($email: String!, $mdp: String!, $nom: String!, $role: Role!) { creerCompteAdmin(email: $email, motDePasse: $mdp, nom: $nom, role: $role) { id nom email role createdAt } }",
+  "variables": {
+    "email": "nouvel.admin@parole-eternelle.cd",
+    "mdp": "AdminSecure456!",
+    "nom": "Nsomwe",
+    "role": "ADMIN"
+  }
+}
+
+###
+
+### [SUPER_ADMIN] Changer le rôle d'un utilisateur
+### Restriction : un SUPER_ADMIN ne peut pas modifier son propre rôle.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenSuperAdmin}}
+
+{
+  "query": "mutation ChangerRole($id: ID!, $role: Role!) { changerRoleUtilisateur(id: $id, role: $role) { id nom role } }",
+  "variables": {
+    "id": "{{idUser}}",
+    "role": "ADMIN"
+  }
+}
+
+###
+
+### [ADMIN] Supprimer un utilisateur (soft delete)
+### L'utilisateur est marqué deletedAt mais reste en base.
+### Restriction : un SUPER_ADMIN ne peut pas se supprimer lui-même.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation SupprimerUtilisateur($id: ID!) { supprimerUtilisateur(id: $id) }",
+  "variables": {
+    "id": "{{idUser}}"
+  }
+}
+
+
+### ============================================================
+### ░░░  SECTION 4 — VERSETS DU JOUR (MODULE 4)  ░░░
+### ============================================================
+###
+### Règle critique : un seul verset peut avoir estActif = true.
+### Quand on active un verset, l'ancien est désactivé en transaction.
+### Si datePublication est future, un cron job l'activera le jour J à 00h01.
+
+### [PUBLIC] Verset du jour actif
+### Cache Redis jusqu'à minuit.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "query GetVersetDuJour { getVersetDuJour { id reference texte meditation versionBiblique datePublication estActif } }"
+}
+
+###
+
+### [ADMIN] Liste de tous les versets (pour l'interface admin)
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "query GetVersets($limit: Int, $offset: Int) { getVersets(limit: $limit, offset: $offset) { id reference texte versionBiblique datePublication estActif createdAt } }",
+  "variables": {
+    "limit": 20,
+    "offset": 0
+  }
+}
+
+###
+
+### [ADMIN] Créer un verset
+### Si datePublication = aujourd'hui ou passé, il peut être activé immédiatement.
+### Si datePublication = futur, il sera activé automatiquement par le cron.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation CreerVerset($reference: String!, $texte: String!, $meditation: String, $version: String, $date: DateTime!) { creerVerset(reference: $reference, texte: $texte, meditation: $meditation, versionBiblique: $version, datePublication: $date) { id reference texte datePublication estActif } }",
+  "variables": {
+    "reference": "Philippiens 4:13",
+    "texte": "Je puis tout par celui qui me fortifie.",
+    "meditation": "Quelle que soit la situation, nous pouvons nous appuyer sur la force de Christ.",
+    "version": "LSG",
+    "date": "2026-05-01T00:00:00Z"
+  }
+}
+
+###
+
+### [ADMIN] Activer manuellement un verset
+### Désactive l'ancien verset actif en même temps (transaction atomique).
+### Invalide le cache Redis du verset du jour et de l'accueil.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation ActiverVerset($id: ID!) { activerVerset(id: $id) { id reference estActif } }",
+  "variables": {
+    "id": "{{idVerset}}"
+  }
+}
+
+###
+
+### [ADMIN] Modifier un verset existant
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation ModifierVerset($id: ID!, $texte: String, $meditation: String) { modifierVerset(id: $id, texte: $texte, meditation: $meditation) { id reference texte meditation } }",
+  "variables": {
+    "id": "{{idVerset}}",
+    "texte": "Je puis tout par celui qui me fortifie.",
+    "meditation": "Une méditation mise à jour."
+  }
+}
+
+###
+
+### [ADMIN] Supprimer un verset
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation SupprimerVerset($id: ID!) { supprimerVerset(id: $id) }",
+  "variables": {
+    "id": "{{idVerset}}"
+  }
+}
+
+
+### ============================================================
+### ░░░  SECTION 5 — ÉVÉNEMENTS & PROGRAMMES CULTE (MODULES 5 & 6)  ░░░
+### ============================================================
+###
+### Événements et programmes culte partagent la même table (TypeEvenement).
+###   - type = EVENEMENT      → possède un organisateur
+###   - type = PROGRAMME_CULTE → organisateur = null
+###
+### Cycle de vie du statut :
+###   BROUILLON → PUBLIE (déclenche une notification FCM) → TERMINE (automatique, cron)
+###                      → ANNULE (manuel)
+
+### [PUBLIC] Prochains événements publiés (app mobile, accueil)
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "query GetProchainEvenements($limit: Int) { getProchainEvenements(limit: $limit) { id titre description dateDebut dateFin heure lieu imageUrl imageExterneUrl organisateur lienYoutube statut } }",
+  "variables": {
+    "limit": 5
+  }
+}
+
+###
+
+### [PUBLIC] Liste filtrée des événements
+### type : EVENEMENT ou PROGRAMME_CULTE
+### statut : BROUILLON, PUBLIE, ANNULE, TERMINE
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "query GetEvenements($type: TypeEvenement, $statut: StatutEvenement, $limit: Int) { getEvenements(type: $type, statut: $statut, limit: $limit) { id type titre dateDebut dateFin heure lieu statut imageUrl } }",
+  "variables": {
+    "type": "EVENEMENT",
+    "statut": "PUBLIE",
+    "limit": 20
+  }
+}
+
+###
+
+### [PUBLIC] Détail d'un événement par ID
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "query GetEvenementById($id: ID!) { getEvenementById(id: $id) { id type titre description dateDebut dateFin heure lieu imageUrl imageExterneUrl organisateur lienYoutube statut createdAt updatedAt } }",
+  "variables": {
+    "id": "{{idEvenement}}"
+  }
+}
+
+###
+
+### [ADMIN] Créer un événement
+### imageUrl : URL Cloudinary (obtenue via POST /api/upload/image).
+### imageExterneUrl : URL externe alternative si pas d'upload Cloudinary.
+### Note : imageUrl a la priorité sur imageExterneUrl côté app mobile.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation CreerEvenement($input: EvenementInput!) { creerEvenement(input: $input) { id type titre dateDebut statut } }",
+  "variables": {
+    "input": {
+      "type": "EVENEMENT",
+      "titre": "Concert de Louange 2026",
+      "description": "Grand concert de louange et d'adoration organisé par l'église.",
+      "dateDebut": "2026-06-15T18:00:00Z",
+      "dateFin": "2026-06-15T22:00:00Z",
+      "heure": "18:00",
+      "lieu": "Salle des fêtes, Lubumbashi",
+      "imageExterneUrl": "https://example.com/concert.jpg",
+      "organisateur": "Département de la Musique",
+      "lienYoutube": null,
+      "statut": "BROUILLON"
+    }
+  }
+}
+
+###
+
+### [ADMIN] Modifier un événement (publier → déclenche notification FCM)
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation ModifierEvenement($id: ID!, $input: EvenementInput!) { modifierEvenement(id: $id, input: $input) { id titre statut updatedAt } }",
+  "variables": {
+    "id": "{{idEvenement}}",
+    "input": {
+      "titre": "Concert de Louange 2026",
+      "dateDebut": "2026-06-15T18:00:00Z",
+      "statut": "PUBLIE"
+    }
+  }
+}
+
+###
+
+### [ADMIN] Créer un programme de culte
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation CreerProgrammeCulte($input: EvenementInput!) { creerEvenement(input: $input) { id type titre dateDebut heure statut } }",
+  "variables": {
+    "input": {
+      "type": "PROGRAMME_CULTE",
+      "titre": "Culte Dominical — 3 Mai 2026",
+      "description": "Service dominical avec message de la Parole.",
+      "dateDebut": "2026-05-03T09:00:00Z",
+      "dateFin": "2026-05-03T12:00:00Z",
+      "heure": "09:00",
+      "lieu": "Siège central, Lubumbashi",
+      "statut": "PUBLIE"
+    }
+  }
+}
+
+###
+
+### [ADMIN] Supprimer un événement (hard delete)
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation SupprimerEvenement($id: ID!) { supprimerEvenement(id: $id) }",
+  "variables": {
+    "id": "{{idEvenement}}"
+  }
+}
+
+
+### ============================================================
+### ░░░  SECTION 6 — SERMONS & PLAYLISTS (MODULE 7)  ░░░
+### ============================================================
+###
+### Structure : PlaylistSermon (1) → Sermon (N).
+### Un sermon peut exister sans playlist (playlistId = null).
+### miniatureUrl : extraite automatiquement depuis l'URL YouTube
+###   → https://img.youtube.com/vi/{videoId}/hqdefault.jpg
+### getDernierSermon = ORDER BY createdAt DESC LIMIT 1 (≠ dernier live).
+
+### [PUBLIC] Dernier sermon ajouté
+### Cache Redis TTL 1h.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "query GetDernierSermon { getDernierSermon { id titre predicateur date lienYoutube miniatureUrl playlist { id titre } createdAt } }"
+}
+
+###
+
+### [PUBLIC] Liste de toutes les playlists avec leurs sermons
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "query GetPlaylists($limit: Int, $offset: Int) { getPlaylists(limit: $limit, offset: $offset) { id titre description theme imageUrl ordre sermons { id titre predicateur date lienYoutube miniatureUrl ordreInPlaylist } createdAt } }",
+  "variables": {
+    "limit": 20,
+    "offset": 0
+  }
+}
+
+###
+
+### [PUBLIC] Détail d'une playlist
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "query GetPlaylistById($id: ID!) { getPlaylistById(id: $id) { id titre description theme imageUrl sermons { id titre predicateur date lienYoutube miniatureUrl ordreInPlaylist } } }",
+  "variables": {
+    "id": "{{idPlaylist}}"
+  }
+}
+
+###
+
+### [PUBLIC] Liste des sermons (filtrable par playlist)
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "query GetSermons($playlistId: ID, $limit: Int, $offset: Int) { getSermons(playlistId: $playlistId, limit: $limit, offset: $offset) { id titre predicateur date lienYoutube miniatureUrl ordreInPlaylist playlist { id titre } } }",
+  "variables": {
+    "playlistId": null,
+    "limit": 20,
+    "offset": 0
+  }
+}
+
+###
+
+### [ADMIN] Créer une playlist
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation CreerPlaylist($titre: String!, $description: String, $theme: String) { creerPlaylist(titre: $titre, description: $description, theme: $theme) { id titre theme createdAt } }",
+  "variables": {
+    "titre": "Série : La Foi qui déplace les montagnes",
+    "description": "Série de prédications sur la foi selon Matthieu 17.",
+    "theme": "FOI"
+  }
+}
+
+###
+
+### [ADMIN] Créer un sermon
+### miniatureUrl est extraite automatiquement du lienYoutube si non fournie.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation CreerSermon($input: SermonInput!) { creerSermon(input: $input) { id titre predicateur date lienYoutube miniatureUrl playlist { id titre } } }",
+  "variables": {
+    "input": {
+      "titre": "Avance par la foi, non par la vue",
+      "description": "2 Corinthiens 5:7 — message sur le chemin de la foi.",
+      "predicateur": "Pasteur Dikembe",
+      "date": "2026-04-27T09:00:00Z",
+      "lienYoutube": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "playlistId": null,
+      "ordreInPlaylist": 1
+    }
+  }
+}
+
+###
+
+### [ADMIN] Réordonner les sermons d'une playlist
+### Met à jour ordreInPlaylist pour chaque sermon en une seule transaction.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation ReordonnerSermons($playlistId: ID!, $ordres: [ReordonnerSermonInput!]!) { reordonnerSermons(playlistId: $playlistId, ordres: $ordres) }",
+  "variables": {
+    "playlistId": "{{idPlaylist}}",
+    "ordres": [
+      { "sermonId": "ID_SERMON_1", "ordre": 1 },
+      { "sermonId": "ID_SERMON_2", "ordre": 2 },
+      { "sermonId": "ID_SERMON_3", "ordre": 3 }
+    ]
+  }
+}
+
+###
+
+### [ADMIN] Importer une playlist YouTube entière
+### Récupère les métadonnées de chaque vidéo via l'API YouTube.
+### Nécessite YOUTUBE_API_KEY dans les variables d'environnement.
+### Retourne le nombre de sermons importés.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation ImporterPlaylistYoutube($url: String!, $playlistId: ID) { importerPlaylistYoutube(playlistUrl: $url, playlistId: $playlistId) }",
+  "variables": {
+    "url": "https://www.youtube.com/playlist?list=PLxxxxxxxxxxxxxxxxxxxxxx",
+    "playlistId": "{{idPlaylist}}"
+  }
+}
+
+
+### ============================================================
+### ░░░  SECTION 7 — ÉMISSIONS TV/RADIO (MODULE 8)  ░░░
+### ============================================================
+
+### [PUBLIC] Liste des émissions (filtrable par type)
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "query GetEmissions($type: TypeEmission, $limit: Int) { getEmissions(type: $type, limit: $limit) { id titre description date lienYoutube miniatureUrl type createdAt } }",
+  "variables": {
+    "type": "EMISSION_TV",
+    "limit": 20
+  }
+}
+
+###
+
+### [ADMIN] Créer une émission
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation CreerEmission($titre: String!, $date: DateTime!, $lien: String!, $type: TypeEmission!, $description: String) { creerEmission(titre: $titre, description: $description, date: $date, lienYoutube: $lien, type: $type) { id titre type date lienYoutube miniatureUrl } }",
+  "variables": {
+    "titre": "PERTV — Émission du Dimanche 3 Mai 2026",
+    "description": "Émission dominicale en direct.",
+    "date": "2026-05-03T10:00:00Z",
+    "lien": "https://www.youtube.com/watch?v=xxxxxxxxxxx",
+    "type": "EMISSION_TV"
+  }
+}
+
+###
+
+### [ADMIN] Modifier une émission
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation ModifierEmission($id: ID!, $titre: String, $date: DateTime) { modifierEmission(id: $id, titre: $titre, date: $date) { id titre date } }",
+  "variables": {
+    "id": "REMPLACER_PAR_ID_EMISSION",
+    "titre": "PERTV — Émission du Dimanche 3 Mai 2026 (mise à jour)",
+    "date": "2026-05-03T10:30:00Z"
+  }
+}
+
+
+### ============================================================
+### ░░░  SECTION 8 — SHORT VIDEOS (MODULE 9)  ░░░
+### ============================================================
+###
+### Les vidéos sont hébergées sur Cloudinary (pas d'upload local).
+### Flux d'upload :
+###   1. POST /api/upload/video → reçoit { videoUrl, miniatureUrl, cloudinaryPublicId }
+###   2. Appeler creerShortVideo avec ces données.
+###
+### downloadUrl : URL de téléchargement direct (format Cloudinary fl_attachment).
+### Les vidéos sont triées par datePublication DESC.
+### Bug v1 corrigé : l'ID UUID stable évite l'ouverture de la mauvaise vidéo.
+
+### [PUBLIC] Liste des short videos (triées par date décroissante)
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "query GetShortVideos($dateDebut: DateTime, $dateFin: DateTime, $limit: Int, $offset: Int) { getShortVideos(dateDebut: $dateDebut, dateFin: $dateFin, limit: $limit, offset: $offset) { id titre description videoUrl miniatureUrl downloadUrl datePublication } }",
+  "variables": {
+    "dateDebut": null,
+    "dateFin": null,
+    "limit": 20,
+    "offset": 0
+  }
+}
+
+###
+
+### [ADMIN] Créer une short video (après upload Cloudinary)
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation CreerShortVideo — NOTE : utiliser l'endpoint REST /api/upload/video d'abord pour obtenir les URLs Cloudinary, puis appeler cette mutation.\n⚠️ Le schéma ne définit pas de mutation creerShortVideo autonome — l'upload se fait via REST.",
+  "variables": {}
+}
+
+###
+
+### [REST] Upload d'une image (Citations, Couvertures, Photos)
+### Retourne { url, publicId } à utiliser dans les mutations GraphQL.
+### Formats acceptés : jpg, jpeg, png, webp (max 10 MB).
+POST http://localhost:4000/api/upload/image
+Content-Type: multipart/form-data; boundary=----FormBoundary
+
+------FormBoundary
+Content-Disposition: form-data; name="file"; filename="citation.jpg"
+Content-Type: image/jpeg
+
+< ./chemin/vers/image.jpg
+------FormBoundary--
+
+
+### ============================================================
+### ░░░  SECTION 9 — CULTES (MODULE 10)  ░░░
+### ============================================================
+###
+### Couvre tous les types de rassemblements : MERCREDI, VENDREDI, SAMEDI,
+### DIMANCHE, SEMINAIRE, CONCERT, AUTRE.
+###
+### Cycle de vie du statut :
+###   PLANIFIE → EN_DIRECT (déclenche notification FCM "culte en direct")
+###            → REDIFFUSION (passage manuel après la fin du direct)
+###
+### estEnDirect : cache Redis TTL 30 secondes pour quasi-temps-réel.
+### La Subscription statutLiveChange permet aux clients web de réagir en temps réel.
+
+### [PUBLIC] Est-ce qu'un culte est en direct actuellement ?
+### Cache Redis TTL 30s. Utilisé par le bouton "Live" de l'app mobile.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "query EstEnDirect { estEnDirect }"
+}
+
+###
+
+### [PUBLIC] Liste des cultes
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "query GetCultes($type: TypeCulte, $statut: StatutCulte, $limit: Int) { getCultes(type: $type, statut: $statut, limit: $limit) { id titre type date lienYoutube miniatureUrl statut createdAt } }",
+  "variables": {
+    "type": null,
+    "statut": null,
+    "limit": 20
+  }
+}
+
+###
+
+### [ADMIN] Créer un culte
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation CreerCulte($titre: String!, $type: TypeCulte!, $date: DateTime!, $lien: String, $description: String) { creerCulte(titre: $titre, description: $description, type: $type, date: $date, lienYoutube: $lien) { id titre type date statut } }",
+  "variables": {
+    "titre": "Culte du Dimanche 3 Mai 2026",
+    "description": "Culte dominical — Thème : La grâce de Dieu",
+    "type": "DIMANCHE",
+    "date": "2026-05-03T09:00:00Z",
+    "lien": null
+  }
+}
+
+###
+
+### [ADMIN] Passer un culte EN DIRECT → déclenche notification FCM immédiatement
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation PasserCulteEnDirect($id: ID!, $statut: StatutCulte!, $lien: String) { modifierCulte(id: $id, statut: $statut, lienYoutube: $lien) { id titre statut lienYoutube } }",
+  "variables": {
+    "id": "{{idCulte}}",
+    "statut": "EN_DIRECT",
+    "lien": "https://www.youtube.com/watch?v=live_stream_id"
+  }
+}
+
+###
+
+### [ADMIN] Passer un culte en REDIFFUSION (fin du direct)
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation PasserCulteRediffusion($id: ID!) { modifierCulte(id: $id, statut: REDIFFUSION) { id titre statut } }",
+  "variables": {
+    "id": "{{idCulte}}"
+  }
+}
+
+
+### ============================================================
+### ░░░  SECTION 10 — CITATIONS (MODULE 11)  ░░░
+### ============================================================
+###
+### Flux d'ajout d'une citation :
+###   1. Uploader l'image via POST /api/upload/image → { url, publicId }
+###   2. Appeler ajouterCitation avec imageUrl et cloudinaryPublicId.
+###
+### Suppression : supprime l'entrée en base ET l'image sur Cloudinary.
+
+### [PUBLIC] Liste des citations (grille)
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "query GetCitations($limit: Int, $offset: Int) { getCitations(limit: $limit, offset: $offset) { id imageUrl texte auteur description createdAt } }",
+  "variables": {
+    "limit": 20,
+    "offset": 0
+  }
+}
+
+###
+
+### [ADMIN] Ajouter une citation (après upload Cloudinary)
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation AjouterCitation($imageUrl: String!, $publicId: String!, $texte: String, $auteur: String) { ajouterCitation(imageUrl: $imageUrl, cloudinaryPublicId: $publicId, texte: $texte, auteur: $auteur) { id imageUrl texte auteur createdAt } }",
+  "variables": {
+    "imageUrl": "https://res.cloudinary.com/parole-eternelle/image/upload/citations/citation_001.jpg",
+    "publicId": "citations/citation_001",
+    "texte": "La foi est la substance des choses qu'on espère.",
+    "auteur": "Hébreux 11:1"
+  }
+}
+
+###
+
+### [ADMIN] Supprimer une citation (supprime aussi de Cloudinary)
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation SupprimerCitation($id: ID!) { supprimerCitation(id: $id) }",
+  "variables": {
+    "id": "{{idCitation}}"
+  }
+}
+
+
+### ============================================================
+### ░░░  SECTION 11 — STRUCTURE ECCLÉSIALE (MODULES 20, 21, 22)  ░░░
+### ============================================================
+###
+### Les trois entités (Eglise, Cellule, Département) sont :
+###   - En lecture : publiques, mises en cache Redis TTL 1h.
+###   - En écriture : réservées au SUPER_ADMIN.
+###
+### Eglise : référentiel utilisé par tous les formulaires de demandes
+###   (Baptême, Intégration, Prière du Salut, Renouvellement).
+###   Le nom doit être unique pour éviter les doublons de la v1.
+
+### [PUBLIC] Liste de toutes les antennes (avec leurs cellules)
+### Cache Redis TTL 1h.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "query GetEglises { getEglises { id nom photoUrl adresse telephone ville lienFacebook pasteurNom pasteurPhotoUrl cellules { id nom } createdAt } }"
+}
+
+###
+
+### [PUBLIC] Détail d'une antenne par ID
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "query GetEgliseById($id: ID!) { getEgliseById(id: $id) { id nom photoUrl adresse telephone ville lienFacebook pasteurNom pasteurPhotoUrl cellules { id nom quartiersCouvertes reference telephone1 telephone2 } } }",
+  "variables": {
+    "id": "{{idEglise}}"
+  }
+}
+
+###
+
+### [PUBLIC] Liste des cellules (filtrable par antenne)
+### Cache Redis TTL 1h.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "query GetCellules($egliseId: ID) { getCellules(egliseId: $egliseId) { id nom quartiersCouvertes adresseReunion reference telephone1 telephone2 eglise { id nom } } }",
+  "variables": {
+    "egliseId": null
+  }
+}
+
+###
+
+### [PUBLIC] Liste de tous les départements
+### Cache Redis TTL 1h.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "query GetDepartements { getDepartements { id nom responsable mission historique createdAt } }"
+}
+
+###
+
+### [SUPER_ADMIN] Créer une antenne
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenSuperAdmin}}
+
+{
+  "query": "mutation CreerEglise($nom: String!, $adresse: String, $ville: String, $telephone: String, $lienFacebook: String, $pasteurNom: String) { creerEglise(nom: $nom, adresse: $adresse, ville: $ville, telephone: $telephone, lienFacebook: $lienFacebook, pasteurNom: $pasteurNom) { id nom ville lienFacebook pasteurNom createdAt } }",
+  "variables": {
+    "nom": "La Parole Éternelle — Kolwezi",
+    "adresse": "Av. Kasai, Q. Manika, Kolwezi",
+    "ville": "Kolwezi",
+    "telephone": "+243812345000",
+    "pasteurNom": "Pasteur Ilunga"
+  }
+}
+
+###
+
+### [SUPER_ADMIN] Créer une cellule
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenSuperAdmin}}
+
+{
+  "query": "mutation CreerCellule($nom: String!, $reference: String, $telephone1: String, $egliseId: ID) { creerCellule(nom: $nom, reference: $reference, telephone1: $telephone1, egliseId: $egliseId) { id nom reference eglise { nom } } }",
+  "variables": {
+    "nom": "Cellule Mont des Oliviers",
+    "reference": "Bâtiment Annexe — Lubumbashi",
+    "telephone1": "+243897654321",
+    "egliseId": "{{idEglise}}"
+  }
+}
+
+###
+
+### [SUPER_ADMIN] Créer un département
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenSuperAdmin}}
+
+{
+  "query": "mutation CreerDepartement($nom: String!, $responsable: String, $mission: String, $historique: String) { creerDepartement(nom: $nom, responsable: $responsable, mission: $mission, historique: $historique) { id nom responsable mission } }",
+  "variables": {
+    "nom": "Département de la Communication Chrétienne",
+    "responsable": "Frère Kalume",
+    "mission": "Gérer et coordonner toutes les communications internes et externes de l'église.",
+    "historique": "Fondé en 2015 pour répondre aux besoins croissants de communication."
+  }
+}
+
+
+### ============================================================
+### ░░░  SECTION 12 — DEMANDES SPIRITUELLES / REQUÊTES (MODULES 12-18)  ░░░
+### ============================================================
+###
+### Architecture unifiée : tous les types de demandes utilisent la table Requete.
+###
+### TYPES ACCESSIBLES À TOUS (Public ou Authentifié) :
+###   - PRIERE  : demande de prière pour soi ou autrui
+###   - BAPTEME : inscription au baptême
+###   - PRIERE_SALUT  : prière de salut
+###   - RENOUVELLEMENT: renouvellement d'engagement
+###   - INTEGRATION   : demande d'intégration à l'église
+###   - DEMANDE_INFO  : question ou demande d'information
+###
+### Statuts valides selon le type :
+###   PRIERE       → EN_ATTENTE, EN_PRIERE, TERMINE, ANNULE
+###   PRIERE_SALUT → EN_ATTENTE, CONTACTE, TERMINE
+###   RENOUVELLEMENT→ EN_ATTENTE, CONTACTE, TERMINE
+###   INTEGRATION  → EN_ATTENTE, CONTACTE, INTEGRE, ABANDONNE
+###   DEMANDE_INFO → EN_ATTENTE, LU, REPONDU
+###   BAPTEME      → EN_ATTENTE, CONFIRME, REALISE, ANNULE
+
+### [AUTH - FIDELE] Soumettre une demande de prière (pour soi)
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenFidele}}
+
+{
+  "query": "mutation SoumettreRequete($input: RequeteAuthInput!) { soumettreRequete(input: $input) { id type statut typePriere estMembre dateDemande } }",
+  "variables": {
+    "input": {
+      "type": "PRIERE",
+      "message": "Je demande la prière pour ma santé et celle de ma famille.",
+      "typePriere": "MOI",
+      "estMembre": true
+    }
+  }
+}
+
+###
+
+### [AUTH - FIDELE] Soumettre une inscription au baptême
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenFidele}}
+
+{
+  "query": "mutation SoumettreBapteme($input: RequeteAuthInput!) { soumettreRequete(input: $input) { id type statut eglise { nom } dateDemande } }",
+  "variables": {
+    "input": {
+      "type": "BAPTEME",
+      "egliseId": "{{idEglise}}"
+    }
+  }
+}
+
+###
+
+### [PUBLIC] Soumettre une demande de prière (sans compte)
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "mutation SoumettreRequetePublique($input: RequetePubliqueInput!) { soumettreRequetePublique(input: $input) { id type statut dateDemande } }",
+  "variables": {
+    "input": {
+      "type": "PRIERE",
+      "nomVisiteur": "Luvumbu",
+      "prenomVisiteur": "David",
+      "whatsappVisiteur": "+243810009988",
+      "message": "Prière pour mon nouveau travail.",
+      "typePriere": "MOI",
+      "estMembre": false
+    }
+  }
+}
+
+###
+
+### [PUBLIC] Soumettre une prière du salut (sans compte)
+### Déduplication : même numéro WhatsApp → une seule soumission par jour.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "mutation SoumettrePriereSalut($input: RequetePubliqueInput!) { soumettreRequetePublique(input: $input) { id type statut dateDemande } }",
+  "variables": {
+    "input": {
+      "type": "PRIERE_SALUT",
+      "nomVisiteur": "Mbuyi",
+      "prenomVisiteur": "Cynthia",
+      "whatsappVisiteur": "+243899000111",
+      "egliseId": "{{idEglise}}"
+    }
+  }
+}
+
+###
+
+### [PUBLIC] Soumettre une demande d'intégration (sans compte)
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "mutation SoumettreIntegration($input: RequetePubliqueInput!) { soumettreRequetePublique(input: $input) { id type statut dateDemande } }",
+  "variables": {
+    "input": {
+      "type": "INTEGRATION",
+      "nomVisiteur": "Banza",
+      "prenomVisiteur": "Samuel",
+      "whatsappVisiteur": "+243812111222",
+      "emailVisiteur": "samuel.banza@email.com",
+      "egliseId": "{{idEglise}}"
+    }
+  }
+}
+
+###
+
+### [PUBLIC] Soumettre un renouvellement d'engagement (sans compte)
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "mutation SoumettreRenouvellement($input: RequetePubliqueInput!) { soumettreRequetePublique(input: $input) { id type statut dateDemande } }",
+  "variables": {
+    "input": {
+      "type": "RENOUVELLEMENT",
+      "nomVisiteur": "Kabila",
+      "prenomVisiteur": "Grace",
+      "whatsappVisiteur": "+243811333444",
+      "egliseId": "{{idEglise}}"
+    }
+  }
+}
+
+###
+
+### [PUBLIC] Soumettre une demande d'information (sans compte)
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "mutation SoumettreDemandeInfo($input: RequetePubliqueInput!) { soumettreRequetePublique(input: $input) { id type statut dateDemande } }",
+  "variables": {
+    "input": {
+      "type": "DEMANDE_INFO",
+      "nomVisiteur": "Kasongo",
+      "prenomVisiteur": "Ruth",
+      "whatsappVisiteur": "+243897555666",
+      "emailVisiteur": "ruth.kasongo@email.com",
+      "message": "Quels sont les horaires des cultes de semaine et y a-t-il un programme pour les jeunes ?"
+    }
+  }
+}
+
+###
+
+### [AUTH - FIDELE] Mes demandes (historique personnel)
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenFidele}}
+
+{
+  "query": "query MesRequetes($limit: Int) { mesRequetes(limit: $limit) { id type statut message dateDemande eglise { nom } } }",
+  "variables": {
+    "limit": 20
+  }
+}
+
+###
+
+### [ADMIN] Liste paginée de toutes les demandes (avec filtres)
+### search : filtre sur le nom ou WhatsApp du visiteur/fidèle.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "query GetRequetes($type: TypeRequete, $statut: StatutRequete, $limit: Int, $offset: Int) { getRequetes(type: $type, statut: $statut, limit: $limit, offset: $offset) { items { id type statut message dateDemande user { nom numeroWhatsapp } nomVisiteur prenomVisiteur whatsappVisiteur eglise { nom } typePriere estMembre } pagination { total hasNextPage } } }",
+  "variables": {
+    "type": "PRIERE",
+    "statut": "EN_ATTENTE",
+    "limit": 20,
+    "offset": 0
+  }
+}
+
+###
+
+### [ADMIN] Mettre à jour le statut d'une demande
+### La couche service valide que le statut est cohérent avec le type.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation UpdateStatutRequete($id: ID!, $statut: StatutRequete!) { updateStatutRequete(id: $id, statut: $statut) { id type statut updatedAt } }",
+  "variables": {
+    "id": "{{idRequete}}",
+    "statut": "LU"
+  }
+}
+
+###
+
+### [ADMIN] Répondre à une demande d'information
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation RepondreRequete($id: ID!, $reponse: String!) { repondreRequete(id: $id, reponse: $reponse) { id statut reponseAdmin } }",
+  "variables": {
+    "id": "{{idRequete}}",
+    "reponse": "Bonjour, voici les informations demandées..."
+  }
+}
+
+
+### ============================================================
+### ░░░  SECTION 13 — RENDEZ-VOUS PASTEUR (MODULE 13)  ░░░
+### ============================================================
+###
+### Règles critiques :
+###   1. MAX 6 RDV par jour (statut != ANNULE).
+###   2. Unicité du créneau : (date, heure) avec statut != ANNULE.
+###      → Index partiel SQL créé manuellement dans la migration.
+###   3. Si le jour est complet, l'app appelle getProchainJourDisponible.
+###
+### prendreRendezVous : accessible publiquement ou avec authentification.
+###   - Si AUTH : les coordonnées sont lues depuis le profil User.
+###   - Si PUBLIC : nomVisiteur et whatsappVisiteur sont obligatoires.
+
+### [PUBLIC] Prochain jour disponible (< 6 RDV)
+### Utilisé par l'app mobile pour guider le fidèle si le jour souhaité est complet.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "query GetProchainJourDisponible { getProchainJourDisponible }"
+}
+
+###
+
+### [PUBLIC] Disponibilité d'un jour précis
+### Retourne les heures libres et le nombre de slots restants.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "query GetDisponibiliteJour($date: Date!) { getDisponibiliteJour(date: $date) { date slotsRestants estComplet heuresDisponibles } }",
+  "variables": {
+    "date": "2026-05-10"
+  }
+}
+
+###
+
+### [AUTH - FIDELE] Prendre un rendez-vous
+### Erreur CONFLICT si : créneau déjà pris OU jour complet.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenFidele}}
+
+{
+  "query": "mutation PrendreRendezVous($date: Date!, $heure: String!, $motif: String!) { prendreRendezVous(date: $date, heure: $heure, motif: $motif) { id date heure motif statut user { nom numeroWhatsapp } } }",
+  "variables": {
+    "date": "2026-05-15",
+    "heure": "10:00",
+    "motif": "Counseling spirituel et orientation personnelle"
+  }
+}
+
+###
+
+### [PUBLIC] Prendre un rendez-vous (sans compte)
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "mutation PrendreRendezVousPublic($date: Date!, $heure: String!, $motif: String!, $nom: String, $whatsapp: String) { prendreRendezVous(date: $date, heure: $heure, motif: $motif, nomVisiteur: $nom, whatsappVisiteur: $whatsapp) { id date heure motif statut nomVisiteur whatsappVisiteur } }",
+  "variables": {
+    "date": "2026-05-15",
+    "heure": "14:00",
+    "nom": "Tshilombo",
+    "whatsapp": "+243815554433",
+    "motif": "Besoin de prière et conseils"
+  }
+}
+
+###
+
+### [AUTH - FIDELE] Mes rendez-vous
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenFidele}}
+
+{
+  "query": "query MesRendezVous { mesRendezVous { id date heure motif statut createdAt } }"
+}
+
+###
+
+### [ADMIN] Liste paginée de tous les rendez-vous
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "query GetRendezVous($statut: StatutRendezVous, $dateDebut: Date, $dateFin: Date, $limit: Int) { getRendezVous(statut: $statut, dateDebut: $dateDebut, dateFin: $dateFin, limit: $limit) { id date heure motif statut user { nom numeroWhatsapp } nomVisiteur prenomVisiteur whatsappVisiteur createdAt } }",
+  "variables": {
+    "statut": "EN_ATTENTE",
+    "dateDebut": null,
+    "dateFin": null,
+    "limit": 20
+  }
+}
+
+###
+
+### [ADMIN] Confirmer / traiter un rendez-vous
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation UpdateStatutRendezVous($id: ID!, $statut: StatutRendezVous!) { updateStatutRendezVous(id: $id, statut: $statut) { id date heure statut user { nom numeroWhatsapp } } }",
+  "variables": {
+    "id": "{{idRendezVous}}",
+    "statut": "CONFIRME"
+  }
+}
+
+
+### ============================================================
+### ░░░  SECTION 14 — MESSAGERIE FIDÈLE ↔ ADMIN (MODULE 23)  ░░░
+### ============================================================
+###
+### Transport : GraphQL Subscriptions via WebSocket (graphql-ws).
+### Fallback  : notification FCM si le destinataire est hors ligne
+###             (détection via Redis SET "online_users").
+###
+### Règles :
+###   - Un fidèle = UNE seule conversation active.
+###   - maConversation crée la conversation si elle n'existe pas encore.
+###   - messagesNonLus = COUNT(messages WHERE statut = ENVOYE AND expediteurId != moi).
+###
+### ATTENTION : la Subscription nouveauMessage ne peut pas être testée
+### via REST Client — utiliser un client WebSocket (ex: Insomnia, Altair).
+
+### [AUTH - FIDELE] Ma conversation (crée si inexistante)
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenFidele}}
+
+{
+  "query": "query MaConversation { maConversation { id statut messagesNonLus admin { nom } messages { id contenu statut expediteur { nom role } createdAt } } }"
+}
+
+###
+
+### [AUTH] Envoyer un message
+### Utilisable par un FIDELE (dans sa conversation) ou un ADMIN (dans n'importe quelle conversation).
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenFidele}}
+
+{
+  "query": "mutation EnvoyerMessage($conversationId: ID!, $contenu: String!) { envoyerMessage(conversationId: $conversationId, contenu: $contenu) { id contenu statut expediteur { nom role } createdAt } }",
+  "variables": {
+    "conversationId": "{{idConversation}}",
+    "contenu": "Bonjour, j'aurais besoin d'informations sur les groupes de maison de mon quartier."
+  }
+}
+
+###
+
+### [AUTH] Marquer tous les messages comme lus
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenFidele}}
+
+{
+  "query": "mutation MarquerMessagesLus($conversationId: ID!) { marquerMessagesLus(conversationId: $conversationId) }",
+  "variables": {
+    "conversationId": "{{idConversation}}"
+  }
+}
+
+###
+
+### [ADMIN] Liste de toutes les conversations (ouvertes ou fermées)
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "query GetConversations($statut: StatutConversation, $limit: Int) { getConversations(statut: $statut, limit: $limit) { items { id statut messagesNonLus fidele { id nom numeroWhatsapp } admin { nom } updatedAt } pagination { total hasNextPage } } }",
+  "variables": {
+    "statut": "OUVERTE",
+    "limit": 20
+  }
+}
+
+###
+
+### [ADMIN] Messages paginés d'une conversation
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "query GetMessages($conversationId: ID!, $limit: Int) { getMessages(conversationId: $conversationId, limit: $limit) { id contenu statut expediteur { nom role } createdAt } }",
+  "variables": {
+    "conversationId": "{{idConversation}}",
+    "limit": 50
+  }
+}
+
+###
+
+### [ADMIN] Assigner un administrateur à une conversation
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation AssignerAdmin($conversationId: ID!, $adminId: ID!) { assignerAdmin(conversationId: $conversationId, adminId: $adminId) { id admin { id nom } statut } }",
+  "variables": {
+    "conversationId": "{{idConversation}}",
+    "adminId": "{{idUser}}"
+  }
+}
+
+###
+
+### [ADMIN] Fermer une conversation
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation FermerConversation($conversationId: ID!) { fermerConversation(conversationId: $conversationId) { id statut updatedAt } }",
+  "variables": {
+    "conversationId": "{{idConversation}}"
+  }
+}
+
+###
+### ─── SUBSCRIPTION (WebSocket) ───────────────────────────────
+### Impossible à tester via REST Client — utiliser Altair ou Insomnia.
+###
+### Connexion WS : ws://localhost:4000/graphql
+### connectionParams : { "Authorization": "Bearer <accessToken>" }
+###
+### Requête :
+###   subscription NouveauMessage($conversationId: ID!) {
+###     nouveauMessage(conversationId: $conversationId) {
+###       id
+###       contenu
+###       statut
+###       expediteur { id nom role }
+###       createdAt
+###     }
+###   }
+###
+### Variables : { "conversationId": "<id>" }
+### ────────────────────────────────────────────────────────────
+
+
+### ============================================================
+### ░░░  SECTION 15 — NOTIFICATIONS PUSH FCM (MODULE 19)  ░░░
+### ============================================================
+###
+### Notifications automatiques déclenchées par le backend :
+###   - Verset du jour  → cron 07h00 chaque matin
+###   - Événement PUBLIE → à la mutation modifierEvenement (statut → PUBLIE)
+###   - Culte EN_DIRECT  → à la mutation modifierCulte (statut → EN_DIRECT)
+###   - Message hors ligne → via le service messagerie (fallback FCM)
+###
+### Notification manuelle : réservée au SUPER_ADMIN.
+
+### [SUPER_ADMIN] Envoyer une notification push manuelle
+### cible : TOUS (tous les tokens FCM) ou FIDELES (uniquement les fidèles authentifiés).
+### Retourne le nombre de notifications envoyées avec succès.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenSuperAdmin}}
+
+{
+  "query": "mutation EnvoyerNotification($titre: String!, $corps: String!, $cible: CibleNotification!) { envoyerNotification(titre: $titre, corps: $corps, cible: $cible) }",
+  "variables": {
+    "titre": "Message important",
+    "corps": "Le culte de ce dimanche aura lieu exceptionnellement à 10h00. Soyez les bienvenus !",
+    "cible": "TOUS"
+  }
+}
+
+
+### ============================================================
+### ░░░  SECTION 16 — BOOKSHOP & DONS (MODULES 24 & 25)  ░░░
+### ============================================================
+###
+### Bookshop :
+###   - estDisponible = false → livre masqué côté app mobile, visible côté admin.
+###   - whatsappAchatUrl : générée automatiquement par le resolver.
+###     Format : https://wa.me/{numero}?text=Je suis intéressé par le livre : {titre}
+###
+### Dons :
+###   - ConfigurationDons est un singleton (ID fixe "GLOBAL_CONFIG").
+###   - coordonnees : liste des méthodes de paiement (Airtel Money, M-Pesa, etc.).
+
+### [PUBLIC] Catalogue de livres disponibles
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "query GetArticlesBookshop($limit: Int, $offset: Int) { getArticlesBookshop(limit: $limit, offset: $offset) { id typeArticle categorie titre prix devise stock imagePrincipalUrl } }",
+  "variables": {
+    "limit": 20,
+    "offset": 0
+  }
+}
+
+###
+
+### [ADMIN] Tous les livres (y compris indisponibles)
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "query GetArticlesAdmin($limit: Int) { getArticlesAdmin(limit: $limit) { id typeArticle categorie titre prix devise stock ventes } }",
+  "variables": {
+    "limit": 50
+  }
+}
+
+###
+
+### [ADMIN] Créer un article Bookshop
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation CreerArticleBookshop($input: ArticleBookshopInput!) { creerArticleBookshop(input: $input) { id typeArticle categorie titre prix devise stock } }",
+  "variables": {
+    "input": {
+      "typeArticle": "LIVRE",
+      "categorie": "EGLISE",
+      "titre": "La Prière qui Change Tout",
+      "auteur": "Pasteur David Mulamba",
+      "prix": 15.00,
+      "devise": "USD",
+      "stock": 100,
+      "imagePrincipalUrl": "https://res.cloudinary.com/parole-eternelle/image/upload/livres/priere_tout.jpg"
+    }
+  }
+}
+
+###
+
+### [ADMIN] Signaler une vente
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation SignalerVente($id: ID!, $quantite: Int!) { signalerVente(id: $id, quantite: $quantite) { id stock ventes } }",
+  "variables": {
+    "id": "{{idLivre}}",
+    "quantite": 1
+  }
+}
+
+###
+
+### [SUPER_ADMIN] Mettre à jour la configuration des dons
+### Remplace entièrement la liste des coordonnees.
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenSuperAdmin}}
+
+{
+  "query": "mutation ModifierConfigDons($whatsapp: String, $coords: [CoordonneesDonInput!]) { modifierConfigurationDons(numeroWhatsappContact: $whatsapp, coordonnees: $coords) { numeroWhatsappContact coordonnees { libelle valeur detail } } }",
+  "variables": {
+    "whatsapp": "+243812000000",
+    "coords": [
+      {
+        "libelle": "Airtel Money",
+        "valeur": "+243815555555",
+        "detail": "Au nom de : La Parole Éternelle",
+        "ordre": 1
+      },
+      {
+        "libelle": "M-Pesa",
+        "valeur": "+243898888888",
+        "detail": "Au nom de : ASBL La Parole Éternelle",
+        "ordre": 2
+      },
+      {
+        "libelle": "Virement bancaire",
+        "valeur": "CD123 4567 8901 2345",
+        "detail": "Banque : Rawbank — Agence Lubumbashi Centre",
+        "ordre": 3
+      }
+    ]
+  }
+}
+
+
+### ============================================================
+### ░░░  SECTION 18 — SESSIONS ET FORMULAIRES (BAPTEME, ENREGISTREMENT)  ░░░
+### ============================================================
+
+### [PUBLIC] Obtenir les sessions actives par type
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "query GetSessionsActives($type: TypeSession!) { getSessionActive(type: $type) { id titre description type dateDebut dateFin estActif } }",
+  "variables": {
+    "type": "BAPTEME"
+  }
+}
+
+###
+
+### [PUBLIC] Soumettre une inscription à une session (Mobile)
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "query": "mutation SoumettreInscription($input: InscriptionSessionInput!) { soumettreInscription(input: $input) { id nom prenom statut } }",
+  "variables": {
+    "input": {
+      "sessionFormulaireId": "REMPLACER_PAR_ID_SESSION",
+      "nom": "Mukendi",
+      "postnom": "Kabongo",
+      "prenom": "Jean",
+      "telephone": "+243812345678",
+      "adresse": "Lubumbashi"
+    }
+  }
+}
+
+###
+
+### [ADMIN] Lister toutes les sessions (pour l'admin)
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "query GetSessions { getSessions { id titre type dateDebut dateFin estActif } }"
+}
+
+###
+
+### [ADMIN] Créer une session (ex: Baptême ou Enregistrement)
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation CreerSession($input: SessionFormulaireInput!) { creerSession(input: $input) { id titre type } }",
+  "variables": {
+    "input": {
+      "titre": "Session de Baptême - Mai 2026",
+      "description": "Inscriptions pour le baptême d'eau.",
+      "type": "BAPTEME",
+      "dateDebut": "2026-05-01T00:00:00Z",
+      "dateFin": "2026-05-30T23:59:59Z",
+      "estActif": true
+    }
+  }
+}
+
+###
+
+### [ADMIN] Voir les inscriptions d'une session
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "query GetInscriptions($sessionId: ID!) { getInscriptions(sessionId: $sessionId) { id nom prenom telephone statut } }",
+  "variables": {
+    "sessionId": "REMPLACER_PAR_ID_SESSION"
+  }
+}
+
+###
+
+### [ADMIN] Valider/Refuser une inscription
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessTokenAdmin}}
+
+{
+  "query": "mutation ModifierStatutInscription($id: ID!, $statut: StatutInscription!) { modifierStatutInscription(id: $id, statut: $statut) { id statut } }",
+  "variables": {
+    "id": "REMPLACER_PAR_ID_INSCRIPTION",
+    "statut": "VALIDE"
+  }
+}
+
+### ============================================================
+### ░░░  SECTION 19 — SUBSCRIPTION (Changement statut live)  ░░░
+### ============================================================
+###
+### Impossible à tester via REST Client — utiliser Altair ou Insomnia.
+###
+### Connexion WS : ws://localhost:4000/graphql
+### Pas d'authentification requise pour cette subscription.
+###
+### Requête :
+###   subscription StatutLiveChange {
+###     statutLiveChange {
+###       id
+###       titre
+###       statut
+###       lienYoutube
+###       type
+###     }
+###   }
+###
+### Cette subscription se déclenche lorsqu'un admin modifie le statut
+### d'un culte vers EN_DIRECT ou REDIFFUSION.
+### ============================================================

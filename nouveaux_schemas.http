@@ -1,0 +1,1040 @@
+### ============================================================
+### SCHÉMAS COMPLETS — La Parole Éternelle
+### Fichier REST Client (.http) — Synchronisé avec le backend
+###
+### 📱 [FIDELE]       → Requiert un token Bearer (rôle FIDELE)
+### 🔒 [ADMIN]        → Requiert un token Bearer (rôle ADMIN ou SUPER_ADMIN)
+### 🔑 [SUPER_ADMIN]  → Requiert un token Bearer (rôle SUPER_ADMIN uniquement)
+### 🌐 [PUBLIC]       → Accessible sans authentification
+### ============================================================
+
+@graphql_url = http://localhost:4000/graphql
+@token = VOTRE_TOKEN_ICI
+
+
+# ═══════════════════════════════════════════════════════════════
+# 0. AUTHENTIFICATION
+# ═══════════════════════════════════════════════════════════════
+
+### 🌐 [PUBLIC] Inscription d'un fidèle (App Mobile)
+POST {{graphql_url}}
+Content-Type: application/json
+
+{
+  "query": "mutation RegisterFidele($input: RegisterInput!) { registerFidele(input: $input) { accessToken refreshToken user { id nom role } } }",
+  "variables": {
+    "input": {
+      "nom": "Kabongo",
+      "postnom": "Mbuyi",
+      "prenom": "Cynthia",
+      "numeroWhatsapp": "+243899000111",
+      "motDePasse": "monMotDePasse123"
+    }
+  }
+}
+
+### 🌐 [PUBLIC] Connexion d'un fidèle (App Mobile)
+POST {{graphql_url}}
+Content-Type: application/json
+
+{
+  "query": "mutation LoginFidele($numeroWhatsapp: String!, $motDePasse: String!) { loginFidele(numeroWhatsapp: $numeroWhatsapp, motDePasse: $motDePasse) { accessToken refreshToken user { id nom role } } }",
+  "variables": {
+    "numeroWhatsapp": "+243991234567",
+    "motDePasse": "Fidele@2026!"
+  }
+}
+
+### 🌐 [PUBLIC] Connexion d'un administrateur (Panel Web)
+POST {{graphql_url}}
+Content-Type: application/json
+
+{
+  "query": "mutation LoginAdmin($email: String!, $mdp: String!) { loginAdmin(email: $email, motDePasse: $mdp) { accessToken refreshToken user { id nom role } } }",
+  "variables": {
+    "email": "admin@parole-eternelle.org",
+    "motDePasse": "adminSecret123"
+  }
+}
+
+### 🌐 [PUBLIC] Rafraîchir le token d'accès
+POST {{graphql_url}}
+Content-Type: application/json
+
+{
+  "query": "mutation RefreshToken($token: String!) { refreshToken(refreshToken: $token) { accessToken refreshToken } }",
+  "variables": {
+    "token": "VOTRE_REFRESH_TOKEN"
+  }
+}
+
+### 📱 [FIDELE] Mettre à jour son profil
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation UpdateProfil($input: UpdateProfilInput!) { updateProfil(input: $input) { id nom prenom postnom photoUrl numeroWhatsapp } }",
+  "variables": {
+    "input": {
+      "nom": "Kabongo",
+      "postnom": "Mbuyi",
+      "prenom": "Cynthia",
+      "numeroWhatsapp": "+243899000112"
+    }
+  }
+}
+
+### 📱 [FIDELE] Changer son mot de passe
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation ChangeMotDePasse($ancien: String!, $nouveau: String!) { changeMotDePasse(ancienMotDePasse: $ancien, nouveauMotDePasse: $nouveau) }",
+  "variables": {
+    "ancien": "monMotDePasse123",
+    "nouveau": "nouveauSecret456"
+  }
+}
+
+### 🌐 [PUBLIC] Enregistrer le token FCM d'un appareil (notifications push)
+### ⚠ Peut être appelé anonymement ou avec token si connecté
+POST {{graphql_url}}
+Content-Type: application/json
+
+{
+  "query": "mutation UpdateFcmToken($token: String!, $plateforme: Plateforme!) { updateFcmToken(token: $token, plateforme: $plateforme) }",
+  "variables": {
+    "token": "dck_abcdef123456789...",
+    "plateforme": "ANDROID"
+  }
+}
+
+
+# ═══════════════════════════════════════════════════════════════
+# 1. ÉVÉNEMENTS (dateDebut + dateFin + PROGRAMME_CULTE)
+# ═══════════════════════════════════════════════════════════════
+
+### 🔒 [ADMIN] Créer un événement multi-jours
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation CreerEvenement($input: EvenementInput!) { creerEvenement(input: $input) { id titre type dateDebut dateFin statut } }",
+  "variables": {
+    "input": {
+      "type": "EVENEMENT",
+      "titre": "Séminaire Missionnaire 2026",
+      "description": "Grand séminaire de 3 jours",
+      "dateDebut": "2026-07-10T08:00:00.000Z",
+      "dateFin": "2026-07-12T18:00:00.000Z",
+      "heure": "08:00",
+      "lieu": "Auditorium central"
+    }
+  }
+}
+
+### 🔒 [ADMIN] Créer un programme de culte dominical
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation CreerEvenement($input: EvenementInput!) { creerEvenement(input: $input) { id titre type dateDebut statut } }",
+  "variables": {
+    "input": {
+      "type": "PROGRAMME_CULTE",
+      "titre": "Culte Dominical — 5 Juillet 2026",
+      "dateDebut": "2026-07-05T09:00:00.000Z",
+      "heure": "09:00",
+      "lieu": "Sanctuaire Principal"
+    }
+  }
+}
+
+### 🌐 [PUBLIC] Lister les événements publiés
+POST {{graphql_url}}
+Content-Type: application/json
+
+{
+  "query": "query GetEvenements($limit: Int, $offset: Int) { getEvenements(limit: $limit, offset: $offset) { items { id titre type dateDebut dateFin lieu statut } totalCount } }",
+  "variables": {
+    "limit": 10,
+    "offset": 0
+  }
+}
+
+
+# ═══════════════════════════════════════════════════════════════
+# 2. REQUÊTES SPIRITUELLES (Auth obligatoire — données auto-remplies)
+# ═══════════════════════════════════════════════════════════════
+# ⚠ IMPORTANT : Ces mutations nécessitent OBLIGATOIREMENT un token.
+# Ne pas envoyer les champs nomVisiteur / whatsappVisiteur : le backend
+# les renseigne automatiquement depuis le profil de l'utilisateur connecté.
+
+### 📱 [FIDELE] Soumettre une prière pour soi-même
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation SoumettreRequete($input: RequeteInput!) { soumettreRequete(input: $input) { id type typePriere statut dateDemande } }",
+  "variables": {
+    "input": {
+      "type": "PRIERE",
+      "message": "Je demande une prière pour ma guérison",
+      "typePriere": "MOI"
+    }
+  }
+}
+
+### 📱 [FIDELE] Soumettre une prière pour un proche
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation SoumettreRequete($input: RequeteInput!) { soumettreRequete(input: $input) { id typePriere statut } }",
+  "variables": {
+    "input": {
+      "type": "PRIERE",
+      "message": "Prière pour la guérison de mon épouse",
+      "typePriere": "AUTRE"
+    }
+  }
+}
+
+### 📱 [FIDELE] Soumettre une prière de salut (avec église saisie librement ou ID)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation SoumettreRequete($input: RequeteInput!) { soumettreRequete(input: $input) { id type egliseNom statut } }",
+  "variables": {
+    "input": {
+      "type": "PRIERE_SALUT",
+      "message": "Je souhaite donner ma vie à Jésus-Christ",
+      "egliseNom": "Église Locale Salem"
+    }
+  }
+}
+
+### 📱 [FIDELE] Soumettre une demande d'intégration (avec église saisie librement ou ID)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation SoumettreRequete($input: RequeteInput!) { soumettreRequete(input: $input) { id type egliseNom lienGroupeIntegration statut } }",
+  "variables": {
+    "input": {
+      "type": "INTEGRATION",
+      "message": "Je désire rejoindre l'église et participer activement",
+      "egliseNom": "Église Locale la Grâce",
+      "estMembre": false
+    }
+  }
+}
+    }
+  }
+}
+
+### 📱 [FIDELE] Soumettre une demande d'information
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation SoumettreRequete($input: RequeteInput!) { soumettreRequete(input: $input) { id type statut } }",
+  "variables": {
+    "input": {
+      "type": "DEMANDE_INFO",
+      "message": "À quelles heures ont lieu les cultes du dimanche ?"
+    }
+  }
+}
+
+### 📱 [FIDELE] Soumettre un renouvellement d'engagement (église en texte libre)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation SoumettreRequete($input: RequeteInput!) { soumettreRequete(input: $input) { id type egliseNom statut } }",
+  "variables": {
+    "input": {
+      "type": "RENOUVELLEMENT",
+      "egliseNom": "Église Évangélique La Grâce — Lubumbashi"
+    }
+  }
+}
+
+### 📱 [FIDELE] Voir mes propres requêtes
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query MesRequetes { mesRequetes { id type statut message reponseAdmin dateDemande } }"
+}
+
+### 🔒 [ADMIN] Lister toutes les requêtes (paginées, filtrables)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query GetRequetes($type: TypeRequete, $statut: StatutRequete, $limit: Int, $offset: Int) { getRequetes(type: $type, statut: $statut, limit: $limit, offset: $offset) { items { id type statut message nomVisiteur whatsappVisiteur user { nom numeroWhatsapp } dateDemande } pagination { total hasNextPage } } }",
+  "variables": {
+    "statut": "EN_ATTENTE",
+    "limit": 20,
+    "offset": 0
+  }
+}
+
+### 🔒 [ADMIN] Répondre à une demande d'information
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation RepondreRequete($id: ID!, $reponse: String!) { repondreRequete(id: $id, reponse: $reponse) { id statut reponseAdmin } }",
+  "variables": {
+    "id": "ID_REQUETE_ICI",
+    "reponse": "Bonjour, les cultes ont lieu chaque dimanche à 9h. Nous vous attendons avec joie !"
+  }
+}
+
+### 🔒 [ADMIN] Changer le statut d'une requête
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation UpdateStatutRequete($id: ID!, $statut: StatutRequete!) { updateStatutRequete(id: $id, statut: $statut) { id statut } }",
+  "variables": {
+    "id": "ID_REQUETE_ICI",
+    "statut": "EN_PRIERE"
+  }
+}
+
+
+# ═══════════════════════════════════════════════════════════════
+# 3. RENDEZ-VOUS PASTORAUX (Auth obligatoire — coordonnées auto-remplies)
+# ═══════════════════════════════════════════════════════════════
+# ⚠ IMPORTANT : Ces mutations nécessitent OBLIGATOIREMENT un token.
+# Ne pas envoyer nomVisiteur / whatsappVisiteur : le backend les renseigne
+# automatiquement depuis le profil de l'utilisateur connecté.
+
+### 🌐 [PUBLIC] Vérifier la disponibilité d'un jour
+POST {{graphql_url}}
+Content-Type: application/json
+
+{
+  "query": "query GetDisponibilite($date: Date!) { getDisponibiliteJour(date: $date) { date slotsRestants estComplet heuresDisponibles heuresPrises creneaux { heure disponible } } }",
+  "variables": {
+    "date": "2026-07-15"
+  }
+}
+
+### 🌐 [PUBLIC] Disponibilités sur une période (calendrier)
+POST {{graphql_url}}
+Content-Type: application/json
+
+{
+  "query": "query GetDispoPeriode($dateDebut: Date!, $dateFin: Date!) { getDisponibilitesPeriode(dateDebut: $dateDebut, dateFin: $dateFin) { date estComplet heuresDisponibles creneaux { heure disponible } } }",
+  "variables": {
+    "dateDebut": "2026-07-01",
+    "dateFin": "2026-07-31"
+  }
+}
+
+### 🌐 [PUBLIC] Trouver le prochain jour disponible
+POST {{graphql_url}}
+Content-Type: application/json
+
+{
+  "query": "query GetProchainJour { getProchainJourDisponible }"
+}
+
+### 📱 [FIDELE] Prendre un rendez-vous pastoral
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation PrendreRendezVous($date: Date!, $heure: String!, $motif: String) { prendreRendezVous(date: $date, heure: $heure, motif: $motif) { id date heure motif statut } }",
+  "variables": {
+    "date": "2026-07-15",
+    "heure": "10:00",
+    "motif": "Besoin de conseils pour préparer mon mariage"
+  }
+}
+
+### 📱 [FIDELE] Voir mes propres rendez-vous
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query MesRendezVous { mesRendezVous { id date heure motif statut } }"
+}
+
+### 🔒 [ADMIN] Lister tous les rendez-vous (admin)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query GetRendezVous($statut: StatutRendezVous, $dateDebut: Date, $dateFin: Date, $limit: Int, $offset: Int) { getRendezVous(statut: $statut, dateDebut: $dateDebut, dateFin: $dateFin, limit: $limit, offset: $offset) { id date heure motif statut nomVisiteur whatsappVisiteur user { nom numeroWhatsapp } } }",
+  "variables": {
+    "statut": "EN_ATTENTE",
+    "limit": 20,
+    "offset": 0
+  }
+}
+
+### 🔒 [ADMIN] Changer le statut d'un rendez-vous
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation UpdateStatutRendezVous($id: ID!, $statut: StatutRendezVous!) { updateStatutRendezVous(id: $id, statut: $statut) { id statut } }",
+  "variables": {
+    "id": "ID_RENDEZVOUS_ICI",
+    "statut": "CONFIRME"
+  }
+}
+
+
+# ═══════════════════════════════════════════════════════════════
+# 4. BOOKSHOP (stock, ventes, devise, typeArticle, whatsappAchatUrl)
+# ═══════════════════════════════════════════════════════════════
+
+### 🔒 [ADMIN] Créer un article — Livre (Partenaire)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation CreerArticle($titre: String!, $prix: Decimal!, $devise: Devise, $categorie: CategorieArticle, $typeArticle: TypeArticle, $stock: Int, $estDisponible: Boolean) { creerArticle(titre: $titre, prix: $prix, devise: $devise, categorie: $categorie, typeArticle: $typeArticle, stock: $stock, estDisponible: $estDisponible) { id titre typeArticle categorie stock ventes devise } }",
+  "variables": {
+    "titre": "Le Chemin de la Foi",
+    "prix": 12.00,
+    "devise": "USD",
+    "categorie": "PARTENAIRE",
+    "typeArticle": "LIVRE",
+    "stock": 30,
+    "estDisponible": true
+  }
+}
+
+### 🔒 [ADMIN] Créer un article — Vêtement (Église)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation CreerArticle($titre: String!, $prix: Decimal!, $devise: Devise, $categorie: CategorieArticle, $typeArticle: TypeArticle, $stock: Int) { creerArticle(titre: $titre, prix: $prix, devise: $devise, categorie: $categorie, typeArticle: $typeArticle, stock: $stock) { id titre stock } }",
+  "variables": {
+    "titre": "T-shirt Parole Éternelle",
+    "prix": 15.00,
+    "devise": "USD",
+    "categorie": "EGLISE",
+    "typeArticle": "VETEMENT",
+    "stock": 50
+  }
+}
+
+### 🔒 [ADMIN] Modifier un article
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation ModifierArticle($id: ID!, $prix: Decimal, $stock: Int, $estDisponible: Boolean) { modifierArticle(id: $id, prix: $prix, stock: $stock, estDisponible: $estDisponible) { id titre prix stock estDisponible } }",
+  "variables": {
+    "id": "ID_ARTICLE_ICI",
+    "prix": 10.00,
+    "stock": 25,
+    "estDisponible": true
+  }
+}
+
+### 🔒 [ADMIN] Signaler une vente (décrémente le stock automatiquement)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation SignalerVente($id: ID!, $quantite: Int) { signalerVente(id: $id, quantite: $quantite) { id titre stock ventes } }",
+  "variables": {
+    "id": "ID_ARTICLE_ICI",
+    "quantite": 2
+  }
+}
+
+### 🔒 [ADMIN] Supprimer un article
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation SupprimerArticle($id: ID!) { supprimerArticle(id: $id) }",
+  "variables": {
+    "id": "ID_ARTICLE_ICI"
+  }
+}
+
+### 🌐 [PUBLIC] Lister les articles disponibles (app mobile)
+POST {{graphql_url}}
+Content-Type: application/json
+
+{
+  "query": "query GetArticles($categorie: CategorieArticle, $typeArticle: TypeArticle, $limit: Int, $offset: Int) { getArticles(categorie: $categorie, typeArticle: $typeArticle, limit: $limit, offset: $offset) { items { id titre auteur prix devise typeArticle categorie estDisponible stock whatsappAchatUrl } totalCount } }",
+  "variables": {
+    "limit": 10,
+    "offset": 0
+  }
+}
+
+### 🌐 [PUBLIC] Obtenir la configuration des dons
+POST {{graphql_url}}
+Content-Type: application/json
+
+{
+  "query": "query GetConfigDons { getConfigurationDons { numeroWhatsappContact coordonnees { id libelle valeur detail } } }"
+}
+
+### 🔑 [SUPER_ADMIN] Modifier la configuration des dons
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation ModifierConfigDons($numero: String, $coordonnees: [CoordonneesDonInput!]) { modifierConfigurationDons(numeroWhatsappContact: $numero, coordonnees: $coordonnees) { numeroWhatsappContact coordonnees { libelle valeur } } }",
+  "variables": {
+    "numero": "+243999000123",
+    "coordonnees": [
+      { "libelle": "Mobile Money — Orange", "valeur": "+243999000123", "detail": "Au nom de La Parole Éternelle", "ordre": 0 },
+      { "libelle": "Mobile Money — Airtel", "valeur": "+243888000456", "detail": "Au nom de La Parole Éternelle", "ordre": 1 }
+    ]
+  }
+}
+
+
+# ═══════════════════════════════════════════════════════════════
+# 5. SESSIONS & FORMULAIRES (Baptême, Enregistrement Membres)
+# ═══════════════════════════════════════════════════════════════
+# ⚠ Les types sont SessionFormulaireInput et InscriptionSessionInput.
+# L'inscription nécessite un token — les champs nom/prenom/telephone
+# sont optionnels (remplis automatiquement depuis le profil).
+
+### 🔒 [ADMIN] Créer une session de Baptême
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation CreerSession($input: SessionFormulaireInput!) { creerSession(input: $input) { id titre type dateDebut dateFin estActif } }",
+  "variables": {
+    "input": {
+      "type": "BAPTEME",
+      "titre": "Session Baptême — Juillet 2026",
+      "description": "Inscriptions pour le prochain baptême",
+      "dateDebut": "2026-07-01T00:00:00.000Z",
+      "dateFin": "2026-07-31T23:59:59.000Z",
+      "estActif": true
+    }
+  }
+}
+
+### 🔒 [ADMIN] Créer une session d'Enregistrement des Membres
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation CreerSession($input: SessionFormulaireInput!) { creerSession(input: $input) { id titre type dateDebut dateFin estActif } }",
+  "variables": {
+    "input": {
+      "type": "ENREGISTREMENT_MEMBRE",
+      "titre": "Enregistrement Membres — Août 2026",
+      "description": "Inscriptions pour les cartes membres",
+      "dateDebut": "2026-08-01T00:00:00.000Z",
+      "dateFin": "2026-08-31T23:59:59.000Z",
+      "estActif": false
+    }
+  }
+}
+
+### 🔒 [ADMIN] Modifier / Activer ou désactiver une session
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation ModifierSession($id: ID!, $input: SessionFormulaireInput!) { modifierSession(id: $id, input: $input) { id titre estActif } }",
+  "variables": {
+    "id": "ID_SESSION_ICI",
+    "input": {
+      "type": "BAPTEME",
+      "titre": "Session Baptême — Juillet 2026",
+      "dateDebut": "2026-07-01T00:00:00.000Z",
+      "dateFin": "2026-07-31T23:59:59.000Z",
+      "estActif": true
+    }
+  }
+}
+
+### 🔒 [ADMIN] Supprimer une session
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation SupprimerSession($id: ID!) { supprimerSession(id: $id) }",
+  "variables": {
+    "id": "ID_SESSION_ICI"
+  }
+}
+
+### 🌐 [PUBLIC] Lister les sessions (filtrables par type)
+POST {{graphql_url}}
+Content-Type: application/json
+
+{
+  "query": "query GetSessions($type: TypeSession) { getSessions(type: $type) { id titre type dateDebut dateFin estActif } }",
+  "variables": {
+    "type": "BAPTEME"
+  }
+}
+
+### 🌐 [PUBLIC] Vérifier si une session est active (avant d'afficher le formulaire)
+POST {{graphql_url}}
+Content-Type: application/json
+
+{
+  "query": "query GetSessionActive($type: TypeSession!) { getSessionActive(type: $type) { id titre type dateDebut dateFin estActif } }",
+  "variables": {
+    "type": "BAPTEME"
+  }
+}
+
+### 📱 [FIDELE] Soumettre une inscription baptême
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation SoumettreInscription($input: InscriptionSessionInput!) { soumettreInscription(input: $input) { id nom prenom telephone statut createdAt } }",
+  "variables": {
+    "input": {
+      "sessionFormulaireId": "ID_SESSION_ICI",
+      "adresse": "123 Avenue de la Paix, Gombe",
+      "egliseId": "ID_EGLISE_ICI"
+    }
+  }
+}
+
+### 📱 [FIDELE] Soumettre une fiche d'identification membre (ENREGISTREMENT_MEMBRE)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation SoumettreInscriptionMembre($input: InscriptionSessionInput!) { soumettreInscription(input: $input) { id nom prenom telephone matricule statut } }",
+  "variables": {
+    "input": {
+      "sessionFormulaireId": "ID_SESSION_MEMBRE_ICI",
+      "profilMembre": {
+        "telephone2": "0812345678",
+        "email": "membre@example.cd",
+        "sexe": "FEMININ",
+        "dateNaissance": "1995-03-15",
+        "lieuNaissance": "Lubumbashi",
+        "etatCivil": "CELIBATAIRE",
+        "dateBapteme": "2018-08-12",
+        "lieuBapteme": "Campus LPE Lubumbashi",
+        "niveauEtudes": "Licence",
+        "profession": "Enseignante",
+        "adressePhysique": "Av. Kasai 45, Q. Kenya",
+        "egliseNom": "Église Évangélique La Grâce — Lubumbashi",
+        "dateAdhesion": "2024-06-01",
+        "captureFicheUrl": "https://res.cloudinary.com/.../inscriptions/xxx.jpg",
+        "captureFichePublicId": "parole-eternelle/inscriptions/xxx",
+        "formationEglise": "École de disciples — 2019",
+        "autresSavoirFaire": "Chant, accueil",
+        "nomConjoint": null,
+        "nombreEnfants": 0,
+        "departements": [
+          {
+            "departementId": "ID_DEPARTEMENT_ICI",
+            "fonction": "Choriste",
+            "depuis": "2020-01-01"
+          }
+        ]
+      }
+    }
+  }
+}
+
+### 🔒 [ADMIN] Lister toutes les inscriptions d'une session
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query GetInscriptions($sessionId: ID!) { getInscriptions(sessionId: $sessionId) { id nom postnom prenom telephone adresse statut user { id nom } createdAt } }",
+  "variables": {
+    "sessionId": "ID_SESSION_ICI"
+  }
+}
+
+### 🔒 [ADMIN] Valider ou refuser une inscription
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation ModifierStatutInscription($id: ID!, $statut: StatutInscription!) { modifierStatutInscription(id: $id, statut: $statut) { id nom statut matricule numeroCarteMembre dateAdhesion } }",
+  "variables": {
+    "id": "ID_INSCRIPTION_ICI",
+    "statut": "VALIDE"
+  }
+}
+
+
+# ═══════════════════════════════════════════════════════════════
+# 6. ÉMISSIONS (TV vs Radio, mediaUrl Cloudinary)
+# ═══════════════════════════════════════════════════════════════
+
+### 🔒 [ADMIN] Créer une émission TV (lien YouTube requis)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation CreerEmission($titre: String!, $date: DateTime!, $type: TypeEmission!, $lienYoutube: String) { creerEmission(titre: $titre, date: $date, type: $type, lienYoutube: $lienYoutube) { id titre type lienYoutube } }",
+  "variables": {
+    "type": "EMISSION_TV",
+    "titre": "La Parole en Direct — Spécial Noël",
+    "date": "2026-12-25T10:00:00.000Z",
+    "lienYoutube": "https://www.youtube.com/watch?v=XXXXXXXXX"
+  }
+}
+
+### 🔒 [ADMIN] Créer une émission Radio (fichier Cloudinary)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation CreerEmission($titre: String!, $date: DateTime!, $type: TypeEmission!, $mediaUrl: String, $cloudinaryPublicId: String) { creerEmission(titre: $titre, date: $date, type: $type, mediaUrl: $mediaUrl, cloudinaryPublicId: $cloudinaryPublicId) { id titre type mediaUrl } }",
+  "variables": {
+    "type": "EMISSION_RADIO",
+    "titre": "Podcast Matinal — Prière du Réveil",
+    "date": "2026-06-01T07:00:00.000Z",
+    "mediaUrl": "https://res.cloudinary.com/votre-cloud/video/upload/emissions_radio/audio_001.mp3",
+    "cloudinaryPublicId": "emissions_radio/audio_001"
+  }
+}
+
+### 🌐 [PUBLIC] Lister les émissions (filtrable par type)
+POST {{graphql_url}}
+Content-Type: application/json
+
+{
+  "query": "query GetEmissions($type: TypeEmission, $limit: Int, $offset: Int) { getEmissions(type: $type, limit: $limit, offset: $offset) { items { id titre type date lienYoutube mediaUrl miniatureUrl } totalCount } }",
+  "variables": {
+    "type": "EMISSION_RADIO",
+    "limit": 10,
+    "offset": 0
+  }
+}
+
+
+# ═══════════════════════════════════════════════════════════════
+# 7. ACCUEIL DYNAMIQUE (bannières carrousel, verset du jour)
+# ═══════════════════════════════════════════════════════════════
+
+### 🌐 [PUBLIC] Obtenir toutes les données de la page d'accueil (app mobile)
+POST {{graphql_url}}
+Content-Type: application/json
+
+{
+  "query": "query GetAccueil { getAccueil { programmeHebdomadaire imagesAccueil { id imageUrl ordre estActif } versetDuJour { reference texte meditation } citationDuJour { auteur texte } dernierSermon { id titre } prochainEvenements { id titre dateDebut lieu } estEnDirect } }"
+}
+
+### 🔑 [SUPER_ADMIN] Mettre à jour la configuration de la page d'accueil
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation ModifierConfigurationAccueil($programmeHebdomadaire: String, $imagesAccueil: [ImageAccueilInput!]) { modifierConfigurationAccueil(programmeHebdomadaire: $programmeHebdomadaire, imagesAccueil: $imagesAccueil) { programmeHebdomadaire imagesAccueil { id imageUrl ordre estActif } } }",
+  "variables": {
+    "programmeHebdomadaire": "https://res.cloudinary.com/.../programme.pdf",
+    "imagesAccueil": [
+      {
+        "imageUrl": "https://res.cloudinary.com/.../banner_culte.jpg",
+        "cloudinaryPublicId": "accueil/banner_culte",
+        "ordre": 0,
+        "estActif": true
+      },
+      {
+        "imageUrl": "https://res.cloudinary.com/.../banner_bapteme.jpg",
+        "cloudinaryPublicId": "accueil/banner_bapteme",
+        "ordre": 1,
+        "estActif": true
+      }
+    ]
+  }
+}
+
+
+# ═══════════════════════════════════════════════════════════════
+# 8. NOTIFICATIONS PUSH (FCM)
+# ═══════════════════════════════════════════════════════════════
+
+### 🔑 [SUPER_ADMIN] Envoyer une notification push manuelle
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation EnvoyerNotification($titre: String!, $corps: String!, $cible: CibleNotification!) { envoyerNotification(titre: $titre, corps: $corps, cible: $cible) }",
+  "variables": {
+    "titre": "Alerte : Changement d'horaire",
+    "corps": "Le culte de ce dimanche débutera exceptionnellement à 08h30.",
+    "cible": "TOUS"
+  }
+}
+
+### 🔑 [SUPER_ADMIN] Envoyer une notification ciblée aux fidèles
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation EnvoyerNotification($titre: String!, $corps: String!, $cible: CibleNotification!) { envoyerNotification(titre: $titre, corps: $corps, cible: $cible) }",
+  "variables": {
+    "titre": "Session Baptême ouverte !",
+    "corps": "Les inscriptions pour le baptême de juillet sont maintenant disponibles.",
+    "cible": "FIDELES"
+  }
+}
+
+### 📱 [FIDELE] Consulter mes notifications persistées (historique)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query MesNotifications($limit: Int, $offset: Int) { mesNotifications(limit: $limit, offset: $offset) { id titre corps lu type metaId createdAt } }",
+  "variables": {
+    "limit": 10,
+    "offset": 0
+  }
+}
+
+### 📱 [FIDELE] Obtenir le nombre de notifications non lues
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query NombreNotificationsNonLues { nombreNotificationsNonLues }"
+}
+
+### 📱 [FIDELE] Marquer une notification spécifique comme lue
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation MarquerNotificationLue($id: ID!) { marquerNotificationLue(id: $id) { id lu } }",
+  "variables": {
+    "id": "REMPO_NOTIF_ID"
+  }
+}
+
+### 📱 [FIDELE] Marquer toutes mes notifications comme lues
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation MarquerToutesNotificationsLues { marquerToutesNotificationsLues }"
+}
+
+
+# ═══════════════════════════════════════════════════════════════
+# 9. GESTION DES UTILISATEURS (Admin)
+# ═══════════════════════════════════════════════════════════════
+
+### 🔒 [ADMIN] Lister les utilisateurs (paginés, recherche)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query GetUtilisateurs($search: String, $role: Role, $limit: Int, $offset: Int) { getUtilisateurs(search: $search, role: $role, limit: $limit, offset: $offset) { items { id nom prenom postnom numeroWhatsapp role createdAt } pagination { total hasNextPage } } }",
+  "variables": {
+    "role": "FIDELE",
+    "limit": 20,
+    "offset": 0
+  }
+}
+
+### 🔒 [ADMIN] Obtenir le détail d'un utilisateur
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query GetUtilisateurById($id: ID!) { getUtilisateurById(id: $id) { id nom prenom postnom email numeroWhatsapp photoUrl role createdAt } }",
+  "variables": {
+    "id": "ID_UTILISATEUR_ICI"
+  }
+}
+
+### 🔑 [SUPER_ADMIN] Changer le rôle d'un utilisateur
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation ChangerRole($id: ID!, $role: Role!) { changerRoleUtilisateur(id: $id, role: $role) { id nom role } }",
+  "variables": {
+    "id": "ID_UTILISATEUR_ICI",
+    "role": "ADMIN"
+  }
+}
+
+### 🔒 [ADMIN] Supprimer un utilisateur
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation SupprimerUtilisateur($id: ID!) { supprimerUtilisateur(id: $id) }",
+  "variables": {
+    "id": "ID_UTILISATEUR_ICI"
+  }
+}
+
+### 🔑 [SUPER_ADMIN] Créer un compte administrateur manuellement
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation CreerCompteAdmin($email: String!, $motDePasse: String!, $nom: String!, $role: Role!) { creerCompteAdmin(email: $email, motDePasse: $motDePasse, nom: $nom, role: $role) { id nom email role } }",
+  "variables": {
+    "email": "nouvel-admin@parole-eternelle.org",
+    "motDePasse": "SecurePass456!",
+    "nom": "Lukusa",
+    "prenom": "Alice",
+    "role": "ADMIN"
+  }
+}
+
+
+# ═══════════════════════════════════════════════════════════════
+# 11. DONS — MaxiCash PayEntryWeb (redirection web)
+# ═══════════════════════════════════════════════════════════════
+
+### 📱 [FIDELE] Initier un don (retourne l'URL de la passerelle MaxiCash)
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation InitierDon($input: InitierDonInput!) { initierDon(input: $input) { transactionId reference paymentUrl statut } }",
+  "variables": {
+    "input": {
+      "montant": 5000,
+      "devise": "CDF",
+      "message": "Offrande culte du dimanche",
+      "telephone": "+243991234567"
+    }
+  }
+}
+
+### 📱 [FIDELE] Vérifier le statut après retour WebView
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query GetDonParReference($reference: String!) { getDonParReference(reference: $reference) { id montant devise statut reference updatedAt } }",
+  "variables": {
+    "reference": "LPE-DON-REMPLACER_PAR_REFERENCE"
+  }
+}
+
+### 📱 [FIDELE] Historique de mes dons
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query GetMesDons($limit: Int, $offset: Int) { getMesDons(limit: $limit, offset: $offset) { totalCount items { id montant devise statut reference message createdAt } } }",
+  "variables": {
+    "limit": 20,
+    "offset": 0
+  }
+}
+
+### 🔒 [ADMIN] Liste des dons reçus
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query GetDonsAdmin($statut: StatutDon, $limit: Int, $offset: Int) { getDonsAdmin(statut: $statut, limit: $limit, offset: $offset) { totalCount items { id montant devise statut reference telephonePayeur createdAt } } }",
+  "variables": {
+    "statut": null,
+    "limit": 50,
+    "offset": 0
+  }
+}
+
+### 🌐 [PUBLIC] Page de retour succès (ouverte par MaxiCash après paiement)
+GET http://localhost:4000/api/dons/retour/success?reference=LPE-DON-EXEMPLE
+
+### 🌐 [PUBLIC] Webhook notify MaxiCash (appelé par MaxiCash, pas le mobile)
+GET http://localhost:4000/api/dons/maxicash/notify?reference=LPE-DON-EXEMPLE&Status=success
+
+
+# ═══════════════════════════════════════════════════════════════
+# 12. TABLEAU DE BORD (Dashboard & Audit)
+# ═══════════════════════════════════════════════════════════════
+
+### 🔒 [ADMIN] Obtenir les KPIs du tableau de bord
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query GetDashboard { getDashboard { totalUtilisateurs totalFideles totalAdmins totalEvenementsActifs totalSermons totalRequetesEnAttente totalRendezVousEnAttente distributionInteractions { type total } prochainEvenements { id titre dateDebut } } }"
+}
+
+### 🔑 [SUPER_ADMIN] Consulter le journal d'audit
+POST {{graphql_url}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query GetAuditLogs($entite: String, $limit: Int, $offset: Int) { getAuditLogs(entite: $entite, limit: $limit, offset: $offset) { id action entite entiteId acteur { nom role } details createdAt } }",
+  "variables": {
+    "entite": "Requete",
+    "limit": 20,
+    "offset": 0
+  }
+}

@@ -1,0 +1,40 @@
+# Dépendances
+node_modules/
+
+# Build
+dist/
+
+# Variables d'environnement
+.env
+.env.local
+.env.production
+
+# Credentials Firebase (NE JAMAIS COMMITTER)
+firebase-service-account.json
+
+# Prisma (Les migrations DOIVENT être committées)
+# node_modules/.prisma/ est déjà ignoré via node_modules/
+
+# Logs
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tests
+coverage/
+.jest-cache/
+
+# TypeScript
+*.tsbuildinfo

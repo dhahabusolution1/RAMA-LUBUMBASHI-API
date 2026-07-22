@@ -1,0 +1,110 @@
+enum StatutRendezVous {
+  EN_ATTENTE
+  CONFIRME
+  EFFECTUE
+  ANNULE
+}
+
+"""
+Rendez-vous avec le pasteur.
+Créneaux de 30 minutes entre 09h00 et 18h00, avec pause de 13h00 à 14h00.
+Un seul fidele par creneau horaire.
+"""
+type RendezVous {
+  id: ID!
+  """Utilisateur ayant pris le rendez-vous (optionnel pour les visiteurs publics)."""
+  user: User
+  """Nom du visiteur (si non authentifie)."""
+  nomVisiteur: String
+  """Prenom du visiteur (si non authentifie)."""
+  prenomVisiteur: String
+  """Numero Whatsapp du visiteur (si non authentifie)."""
+  whatsappVisiteur: String
+  """Date du rendez-vous (format YYYY-MM-DD)."""
+  date: Date!
+  """Heure au format HH:MM (ex: 15:00)."""
+  heure: String!
+  motif: String!
+  statut: StatutRendezVous!
+  createdAt: DateTime!
+}
+
+type CreneauHoraire {
+  """Heure au format HH:MM."""
+  heure: String!
+  """Faux si le créneau est déjà pris, passé ou si le jour est complet."""
+  disponible: Boolean!
+}
+
+"""
+Informations sur la disponibilite d'une journee de rendez-vous.
+"""
+type DisponibiliteJour {
+  date: Date!
+  """Nombre de rendez-vous restants disponibles."""
+  slotsRestants: Int!
+  """Vrai si le jour est complet ou passé."""
+  estComplet: Boolean!
+  """Liste des heures encore disponibles (créneaux réservables)."""
+  heuresDisponibles: [String!]!
+  """Heures déjà réservées (à désactiver dans l'interface)."""
+  heuresPrises: [String!]!
+  """Grille horaire complète avec indicateur disponible / indisponible."""
+  creneaux: [CreneauHoraire!]!
+}
+
+extend type Query {
+  """
+  Retourne les informations de disponibilite pour une date donnee.
+  Inclut les heures disponibles et le nombre de slots restants.
+  """
+  getDisponibiliteJour(date: Date!): DisponibiliteJour!
+
+  """
+  Disponibilités sur une période (calendrier mobile).
+  Maximum 62 jours. Chaque jour inclut estComplet pour désactiver les dates pleines.
+  """
+  getDisponibilitesPeriode(dateDebut: Date!, dateFin: Date!): [DisponibiliteJour!]!
+
+  """
+  Retourne la prochaine date ayant au moins un creneau disponible.
+  Utile pour guider le fidele si le jour demande est complet.
+  """
+  getProchainJourDisponible: Date!
+
+  """
+  Retourne les rendez-vous de l'utilisateur connecte.
+  Requiert une authentification.
+  """
+  mesRendezVous: [RendezVous!]!
+
+  """
+  Liste paginee des rendez-vous. Acces reserve aux administrateurs.
+  """
+  getRendezVous(
+    search: String
+    dateDebut: Date
+    dateFin: Date
+    statut: StatutRendezVous
+    limit: Int = 20
+    offset: Int = 0
+  ): [RendezVous!]!
+}
+
+extend type Mutation {
+  """
+  Prend un rendez-vous avec le pasteur.
+  Requiert une authentification. Les coordonnees de contact sont lues depuis le profil.
+  Retourne une erreur CONFLICT si le creneau est deja pris ou si le jour est complet.
+  """
+  prendreRendezVous(
+    date: Date!, 
+    heure: String!, 
+    motif: String!
+  ): RendezVous!
+
+  """
+  Met a jour le statut d'un rendez-vous. Acces reserve aux administrateurs.
+  """
+  updateStatutRendezVous(id: ID!, statut: StatutRendezVous!): RendezVous!
+}

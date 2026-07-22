@@ -1,0 +1,111 @@
+"""
+Roles disponibles dans le systeme.
+- SUPER_ADMIN : acces total, gestion des admins et des referentiels.
+- ADMIN : gestion des contenus et des demandes.
+- FIDELE : acces mobile, soumission des demandes spirituelles.
+"""
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  FIDELE
+}
+
+"""
+Plateforme mobile de l'appareil (pour les tokens FCM).
+"""
+enum Plateforme {
+  IOS
+  ANDROID
+}
+
+"""
+Profil utilisateur du systeme.
+"""
+type User {
+  id: ID!
+  nom: String!
+  postnom: String
+  prenom: String
+  email: String
+  numeroWhatsapp: String
+  photoUrl: String
+  role: Role!
+  createdAt: DateTime!
+}
+
+"""
+Reponse retournee apres une authentification reussie.
+"""
+type AuthResponse {
+  """Token d'acces a courte duree (15 minutes)."""
+  accessToken: String!
+  """Token de rafraichissement a longue duree (30 jours)."""
+  refreshToken: String!
+  user: User!
+}
+
+"""
+Donnees requises pour l'inscription d'un fidele.
+"""
+input RegisterInput {
+  nom: String!
+  postnom: String
+  prenom: String
+  """Numero au format international (+243XXXXXXXXX)."""
+  numeroWhatsapp: String!
+  """Mot de passe de 8 caracteres minimum."""
+  motDePasse: String!
+}
+
+"""
+Donnees pour la mise a jour du profil fidele.
+"""
+input UpdateProfilInput {
+  nom: String
+  postnom: String
+  prenom: String
+  photoUrl: String
+  numeroWhatsapp: String
+}
+
+extend type Mutation {
+  """
+  Inscription d'un nouveau compte fidele via numero WhatsApp et mot de passe.
+  """
+  registerFidele(input: RegisterInput!): AuthResponse!
+
+  """
+  Connexion d'un fidele via numero WhatsApp et mot de passe.
+  """
+  loginFidele(numeroWhatsapp: String!, motDePasse: String!): AuthResponse!
+
+  """
+  Connexion d'un administrateur via email et mot de passe.
+  Seuls les comptes ADMIN et SUPER_ADMIN peuvent se connecter via cette mutation.
+  """
+  loginAdmin(email: String!, motDePasse: String!): AuthResponse!
+
+  """
+  Renouvelle le token d'acces en utilisant un token de rafraichissement valide.
+  L'ancien refresh token est invalide apres cette operation.
+  """
+  refreshToken(refreshToken: String!): AuthResponse!
+
+  """
+  Met a jour le profil de l'utilisateur actuellement connecte.
+  Requiert une authentification.
+  """
+  updateProfil(input: UpdateProfilInput!): User!
+
+  """
+  Change le mot de passe de l'utilisateur connecte.
+  Requiert l'ancien mot de passe pour confirmation.
+  """
+  changeMotDePasse(ancienMotDePasse: String!, nouveauMotDePasse: String!): Boolean!
+
+  """
+  Enregistre ou met a jour le token FCM de l'appareil pour les notifications push.
+  Accessible aux utilisateurs connectes et aux visiteurs anonymes.
+  """
+  updateFcmToken(token: String!, plateforme: Plateforme!): Boolean!
+}

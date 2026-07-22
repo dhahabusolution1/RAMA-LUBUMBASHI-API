@@ -1,0 +1,65 @@
+"""
+Resultat pagine generique pour les listes.
+"""
+type PaginationInfo {
+  """Nombre total d'elements disponibles."""
+  total: Int!
+  """Nombre d'elements retournes dans cette page."""
+  count: Int!
+  limit: Int!
+  offset: Int!
+  """Indique s'il existe une page suivante."""
+  hasNextPage: Boolean!
+}
+
+"""
+Liste paginee d'utilisateurs.
+"""
+type UsersPage {
+  items: [User!]!
+  pagination: PaginationInfo!
+}
+
+extend type Query {
+  """
+  Retourne la liste paginee des utilisateurs. Acces reserve aux administrateurs.
+  Supporte la recherche par nom ou numero WhatsApp, et le filtre par role.
+  """
+  getUtilisateurs(
+    search: String
+    role: Role
+    limit: Int = 20
+    offset: Int = 0
+  ): UsersPage!
+
+  """
+  Retourne le detail d'un utilisateur par son ID. Acces reserve aux administrateurs.
+  """
+  getUtilisateurById(id: ID!): User
+}
+
+extend type Mutation {
+  """
+  Change le role d'un utilisateur. Acces exclusif au SUPER_ADMIN.
+  Un SUPER_ADMIN ne peut pas modifier son propre role.
+  """
+  changerRoleUtilisateur(id: ID!, role: Role!): User!
+
+  """
+  Supprime un utilisateur (soft delete). Acces reserve aux administrateurs.
+  Un SUPER_ADMIN ne peut pas se supprimer lui-meme.
+  """
+  supprimerUtilisateur(id: ID!): Boolean!
+
+  """
+  Cree un compte administrateur manuellement. Acces exclusif au SUPER_ADMIN.
+  """
+  creerCompteAdmin(
+    email: String!
+    motDePasse: String!
+    nom: String!
+    postnom: String
+    prenom: String
+    role: Role!
+  ): User!
+}

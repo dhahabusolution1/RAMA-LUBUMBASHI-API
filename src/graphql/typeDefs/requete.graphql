@@ -1,0 +1,129 @@
+"""
+Type de demande spirituelle soumise par un fidele ou un visiteur.
+"""
+enum TypeRequete {
+  """Demande de priere pour soi ou pour autrui. Accessible publiquement ou avec auth."""
+  PRIERE
+  """Priere de salut. Accessible publiquement ou avec auth."""
+  PRIERE_SALUT
+  """Renouvellement d'engagement. Accessible publiquement ou avec auth."""
+  RENOUVELLEMENT
+  """Demande d'integration a l'eglise. Accessible publiquement ou avec auth."""
+  INTEGRATION
+  """Question ou demande d'information. Accessible publiquement ou avec auth."""
+  DEMANDE_INFO
+  """Inscription au bapteme. Accessible publiquement ou avec auth."""
+  BAPTEME
+}
+
+"""
+Statut unifie d'une demande. Les valeurs valides dependent du TypeRequete.
+"""
+enum StatutRequete {
+  EN_ATTENTE
+  LU
+  REPONDU
+  EN_PRIERE
+  TERMINE
+  CONTACTE
+  INTEGRE
+  ABANDONNE
+  CONFIRME
+  REALISE
+  ANNULE
+}
+
+enum TypeDemandePriere {
+  MOI
+  AUTRE
+}
+
+"""
+Demande spirituelle soumise par un fidele ou un visiteur.
+"""
+type Requete {
+  id: ID!
+  type: TypeRequete!
+  """Auteur authentifie, null pour les soumissions publiques."""
+  user: User
+  """Nom du visiteur non authentifie."""
+  nomVisiteur: String
+  prenomVisiteur: String
+  whatsappVisiteur: String
+  emailVisiteur: String
+  eglise: Eglise
+  """Nom d'église saisi librement (renouvellement d'engagement)."""
+  egliseNom: String
+  message: String
+  reponseAdmin: String
+  typePriere: TypeDemandePriere
+  estMembre: Boolean
+  statut: StatutRequete!
+  dateDemande: DateTime!
+  createdAt: DateTime!
+  
+  """Lien du groupe d'intégration WhatsApp (uniquement retourné pour les requêtes d'intégration)."""
+  lienGroupeIntegration: String
+}
+
+"""
+Donnees pour une soumission de requete (necessite authentification).
+"""
+input RequeteInput {
+  type: TypeRequete!
+  egliseId: ID
+  """Nom d'église d'appartenance (texte libre, requis pour RENOUVELLEMENT)."""
+  egliseNom: String
+  message: String
+  typePriere: TypeDemandePriere
+  estMembre: Boolean
+}
+
+type RequetesPage {
+  items: [Requete!]!
+  pagination: PaginationInfo!
+}
+
+extend type Query {
+  """
+  Retourne les demandes de l'utilisateur connecte.
+  Requiert une authentification.
+  """
+  mesRequetes(limit: Int = 20, offset: Int = 0): [Requete!]!
+
+  """
+  Liste paginee de toutes les demandes. Acces reserve aux administrateurs.
+  Filtrable par type, statut et plage de dates.
+  """
+  getRequetes(
+    type: TypeRequete
+    statut: StatutRequete
+    typePriere: TypeDemandePriere
+    search: String
+    dateDebut: DateTime
+    dateFin: DateTime
+    limit: Int = 20
+    offset: Int = 0
+  ): RequetesPage!
+
+  """Detail d'une demande par ID. Acces reserve aux administrateurs."""
+  getRequeteById(id: ID!): Requete
+}
+
+extend type Mutation {
+  """
+  Soumet une demande spirituelle (tous types). Requiert une authentification.
+  """
+  soumettreRequete(input: RequeteInput!): Requete!
+
+  """
+  Met a jour le statut d'une demande. Acces reserve aux administrateurs.
+  La couche service valide que le statut est coherent avec le type de demande.
+  """
+  updateStatutRequete(id: ID!, statut: StatutRequete!): Requete!
+
+  """
+  Enregistre une reponse a une demande d'information. Passe le statut a REPONDU.
+  """
+  repondreRequete(id: ID!, reponse: String!): Requete!
+}
