@@ -45,7 +45,7 @@ router.post('/', upload.single('file'), async (req: any, res) => {
     }
 
     const folderName = req.body.folder || 'misc';
-    const folderPath = `arche-source-de-vie/${folderName}`;
+    const folderPath = `rama-lubumbashi/${folderName}`;
 
     // Upload via stream
     const uploadStream = cloudinary.uploader.upload_stream(

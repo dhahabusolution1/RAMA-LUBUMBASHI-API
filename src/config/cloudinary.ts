@@ -23,15 +23,15 @@ export { cloudinary };
 
 // Dossiers Cloudinary par type de contenu
 export const CLOUDINARY_FOLDERS = {
-  PROFILS: 'arche-source-de-vie/profils',
-  INSCRIPTIONS: 'arche-source-de-vie/inscriptions',
-  EGLISES: 'arche-source-de-vie/eglises',
-  EVENEMENTS: 'arche-source-de-vie/evenements',
-  SERMONS: 'arche-source-de-vie/sermons',
-  CITATIONS: 'arche-source-de-vie/citations',
-  SHORT_VIDEOS: 'arche-source-de-vie/shorts',
-  ARTICLES: 'arche-source-de-vie/articles',
-  ACCUEIL: 'arche-source-de-vie/accueil',
+  PROFILS: 'rama-lubumbashi/profils',
+  INSCRIPTIONS: 'rama-lubumbashi/inscriptions',
+  EGLISES: 'rama-lubumbashi/eglises',
+  EVENEMENTS: 'rama-lubumbashi/evenements',
+  SERMONS: 'rama-lubumbashi/sermons',
+  CITATIONS: 'rama-lubumbashi/citations',
+  SHORT_VIDEOS: 'rama-lubumbashi/shorts',
+  ARTICLES: 'rama-lubumbashi/articles',
+  ACCUEIL: 'rama-lubumbashi/accueil',
 } as const;
 
 /**

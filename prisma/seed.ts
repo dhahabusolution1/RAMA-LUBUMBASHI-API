@@ -55,20 +55,20 @@ async function main() {
   const config = await prisma.configurationApp.upsert({
     where: { id: 'GLOBAL_CONFIG' },
     update: {
-      programmeHebdomadaire: 'Dimanche (culte) | Séminaires en semaine | Émissions en ligne',
-      programmeDimanche: '08h00 — Accueil\n08h30 — Louange & adoration\n09h15 — Parole\n10h00 — Prière & annonces\n10h30 — Bénédiction',
-      numeroWhatsappContact: '+243814993485',
+      programmeHebdomadaire: 'Dimanche (culte) | Mercredi / Vendredi (enseignements) | Diffusions en ligne',
+      programmeDimanche: '08h30 — Accueil\n09h00 — Louange & adoration\n09h45 — Enseignement\n11h00 — Prière & annonces\n11h30 — Bénédiction',
+      numeroWhatsappContact: '+243993038602',
     },
     create: {
       id: 'GLOBAL_CONFIG',
-      programmeHebdomadaire: 'Dimanche (culte) | Séminaires en semaine | Émissions en ligne',
-      programmeDimanche: '08h00 — Accueil\n08h30 — Louange & adoration\n09h15 — Parole\n10h00 — Prière & annonces\n10h30 — Bénédiction',
-      numeroWhatsappContact: '+243814993485',
+      programmeHebdomadaire: 'Dimanche (culte) | Mercredi / Vendredi (enseignements) | Diffusions en ligne',
+      programmeDimanche: '08h30 — Accueil\n09h00 — Louange & adoration\n09h45 — Enseignement\n11h00 — Prière & annonces\n11h30 — Bénédiction',
+      numeroWhatsappContact: '+243993038602',
       coordonneesDons: {
         create: [
-          { libelle: 'Mobile Money – Orange', valeur: '+243890123456', detail: 'Au nom de Arche Source de Vie', ordre: 0 },
-          { libelle: 'Mobile Money – Airtel', valeur: '+243810123456', detail: 'Au nom de Arche Source de Vie', ordre: 1 },
-          { libelle: 'Compte bancaire – Rawbank', valeur: 'RB-0012345678', detail: 'Arche Source de Vie, Lubumbashi', ordre: 2 },
+          { libelle: 'Mobile Money – Orange / Airtel', valeur: '+243993038602', detail: 'Au nom de Rama Lubumbashi (dons & conférences)', ordre: 0 },
+          { libelle: 'International (ZA)', valeur: '+27835046238', detail: 'Dons & conférences', ordre: 1 },
+          { libelle: 'Compte bancaire – À confirmer', valeur: 'À définir', detail: 'Cathédrale des Vainqueurs, Lubumbashi', ordre: 2 },
         ],
       },
     },
@@ -81,32 +81,32 @@ async function main() {
 
   // ─── SUPER_ADMIN ──────────────────────────────────────────────
   const superAdmin = await prisma.user.upsert({
-    where: { email: 'superadmin@archesourcevie.cd' },
+    where: { email: 'superadmin@ramalubumbashi.org' },
     update: {},
     create: {
-      nom: 'Monga', postnom: '', prenom: 'Israël',
-      email: 'superadmin@archesourcevie.cd',
+      nom: 'Ufunu', postnom: 'Tshilembe Lukama', prenom: 'Sébastien',
+      email: 'superadmin@ramalubumbashi.org',
       motDePasseHash: pwdAdmin, role: 'SUPER_ADMIN',
     },
   });
 
   // ─── ADMINS ───────────────────────────────────────────────────
   const admin1 = await prisma.user.upsert({
-    where: { email: 'secretariat.lubumbashi@archesourcevie.cd' },
+    where: { email: 'secretariat@ramalubumbashi.org' },
     update: {},
     create: {
-      nom: 'Secrétariat', postnom: 'Lubumbashi', prenom: 'ASV',
-      email: 'secretariat.lubumbashi@archesourcevie.cd',
+      nom: 'Secrétariat', postnom: 'Rama', prenom: 'Lubumbashi',
+      email: 'secretariat@ramalubumbashi.org',
       motDePasseHash: pwdAdmin, role: 'ADMIN',
     },
   });
 
   const admin2 = await prisma.user.upsert({
-    where: { email: 'secretariat.pointenoire@archesourcevie.cd' },
+    where: { email: 'librairie@ramalubumbashi.org' },
     update: {},
     create: {
-      nom: 'Kangudia', postnom: 'Grâce', prenom: 'Hervé',
-      email: 'secretariat.pointenoire@archesourcevie.cd',
+      nom: 'Librairie', postnom: 'Médias', prenom: 'Rama',
+      email: 'librairie@ramalubumbashi.org',
       motDePasseHash: pwdAdmin, role: 'ADMIN',
     },
   });
@@ -144,47 +144,33 @@ async function main() {
 
   console.log('Utilisateurs OK');
 
-  // ─── EGLISES ─────────────────────────────────────────────────
-  const egliseLubs = await prisma.eglise.upsert({
-    where: { nom: 'Arche Source de Vie – Lubumbashi' },
-    update: { pasteurNom: 'Apôtre Israël Monga', pasteurUserId: superAdmin.id },
+  // ─── ÉGLISE ──────────────────────────────────────────────────
+  const egliseMere = await prisma.eglise.upsert({
+    where: { nom: 'Cathédrale des Vainqueurs — Rama Lubumbashi' },
+    update: {
+      pasteurNom: 'Rév. Dr Sébastien Ufunu Tshilembe Lukama',
+      pasteurUserId: superAdmin.id,
+      adresse: '2939 Avenue Mpolo, Q/ Gambela 2, réf. Marché Kasangulu',
+      telephone: '+243993038602',
+    },
     create: {
-      nom: 'Arche Source de Vie – Lubumbashi',
-      ville: 'Lubumbashi', adresse: 'Avenue Biayi, entre Kilela Balanda et de la Révolution',
-      telephone: '+243814993485',
-      pasteurNom: 'Apôtre Israël Monga', pasteurUserId: superAdmin.id,
+      nom: 'Cathédrale des Vainqueurs — Rama Lubumbashi',
+      ville: 'Lubumbashi',
+      adresse: '2939 Avenue Mpolo, Q/ Gambela 2, réf. Marché Kasangulu',
+      telephone: '+243993038602',
+      pasteurNom: 'Rév. Dr Sébastien Ufunu Tshilembe Lukama',
+      pasteurUserId: superAdmin.id,
     },
   });
 
-  const egliseKolwezi = await prisma.eglise.upsert({
-    where: { nom: 'Arche Source de Vie – Pointe-Noire' },
-    update: {},
-    create: {
-      nom: 'Arche Source de Vie – Pointe-Noire',
-      ville: 'Pointe-Noire', adresse: 'Pointe-Noire, République du Congo',
-      telephone: '+242055151561',
-      pasteurNom: 'Pasteur Hervé Grâce Kangudia', pasteurUserId: admin2.id,
-    },
-  });
-
-  const egliseKipushi = await prisma.eglise.upsert({
-    where: { nom: 'Arche Source de Vie – Bel Air (Siège)' },
-    update: {},
-    create: {
-      nom: 'Arche Source de Vie – Bel Air (Siège)',
-      ville: 'Lubumbashi', adresse: 'N°1076 des Plaines, Quartier Bel Air',
-    },
-  });
-
-  console.log('Eglises OK');
+  void admin2;
+  console.log('Eglise OK');
 
   // ─── CELLULES ─────────────────────────────────────────────────
   await prisma.cellule.createMany({
     data: [
-      { nom: 'Cellule Quartier Golf', egliseId: egliseLubs.id, quartiersCouvertes: 'Golf, Plateau', reference: 'Maison de priere Golf', telephone1: '+243970001111' },
-      { nom: 'Cellule Commune Kenya', egliseId: egliseLubs.id, quartiersCouvertes: 'Kenya, Ruashi', reference: 'Kenya, Rue Kilimanjaro 12', telephone1: '+243970002222' },
-      { nom: 'Cellule Centre-Ville', egliseId: egliseLubs.id, quartiersCouvertes: 'Centre, Kamalondo', reference: 'Kamalondo, Av. Kasai 5', telephone1: '+243970003333' },
-      { nom: 'Cellule Pointe-Noire Centre', egliseId: egliseKolwezi.id, quartiersCouvertes: 'Centre-ville', reference: 'Antenne Pointe-Noire', telephone1: '+24206832140' },
+      { nom: 'Cellule Gambela 2', egliseId: egliseMere.id, quartiersCouvertes: 'Gambela 2, Kasangulu', reference: 'Cathédrale des Vainqueurs', telephone1: '+243970001111' },
+      { nom: 'Cellule Familles', egliseId: egliseMere.id, quartiersCouvertes: 'Gambela, environs', reference: 'Ministère des Familles', telephone1: '+243970002222' },
     ],
     skipDuplicates: true,
   });
@@ -193,11 +179,11 @@ async function main() {
   // ─── DEPARTEMENTS ────────────────────────────────────────────
   await prisma.departement.createMany({
     data: [
-      { nom: 'Département Couples & Familles', responsable: 'Soeur Josiane Tshimanga', mission: 'Restauration des familles et séminaires de couples' },
-      { nom: 'Département Enseignement & Combat Spirituel', responsable: 'Frere Christophe Mande', mission: 'Enseignement de la Parole, délivrance et combat spirituel' },
-      { nom: 'Département Média & Diffusion', responsable: 'Frere Samuel Kalonji', mission: 'Recevez la Vie TV — diffusion et médias' },
-      { nom: 'Departement Femmes en Christ', responsable: 'Soeur Esther Kabila', mission: 'Edification et solidarite entre femmes de la congregation' },
-      { nom: 'Departement Intendance', responsable: 'Frere Robert Mutombo', mission: 'Gestion logistique des cultes et evenements' },
+      { nom: 'Département d\'Enseignement Théologique et Familial', responsable: 'Rév. Dr Sébastien Ufunu', mission: 'Doctrine, enseignement et restauration des familles' },
+      { nom: 'Département d\'Intercession et Ministère des Familles', responsable: 'À désigner', mission: 'Intercession et accompagnement des familles' },
+      { nom: 'Département de Louange & Adoration', responsable: 'À désigner', mission: 'Louange et adoration des cultes' },
+      { nom: 'Département Média (Rama Lubumbashi TV)', responsable: 'Équipe Média', mission: 'Diffusions YouTube et publications' },
+      { nom: 'Librairie / Bookshop', responsable: 'Librairie Rama', mission: 'Diffusion des ouvrages du Dr Sébastien Ufunu' },
     ],
     skipDuplicates: true,
   });
@@ -206,9 +192,9 @@ async function main() {
   // ─── VERSETS DU JOUR ─────────────────────────────────────────
   const verset1 = await prisma.versetJour.create({
     data: {
-      reference: 'Philippiens 4:13', versionBiblique: 'LSG',
-      texte: 'Je puis tout par celui qui me fortifie.',
-      meditation: 'Cette promesse s\'applique a toutes les circonstances de la vie. Dieu ne nous appelle pas a reussir par nos propres forces, mais a nous appuyer sur les Siennes.',
+      reference: 'Josué 24:15', versionBiblique: 'LSG',
+      texte: 'Quant à moi et à ma maison, nous servirons l\'Éternel.',
+      meditation: 'Rama Lubumbashi — Cathédrale des Vainqueurs : la restauration intégrale des familles en Jésus-Christ.',
       datePublication: new Date('2026-04-30'), estActif: true,
     },
   });
@@ -225,10 +211,9 @@ async function main() {
   // ─── EVENEMENTS ──────────────────────────────────────────────
   await prisma.evenement.createMany({
     data: [
-      { type: 'EVENEMENT', titre: 'Camp de Prieres 2026', description: 'Trois jours de jeune, de priere et de revelation. Intercesseurs, venez en masse !', dateDebut: new Date('2026-06-10T06:00:00'), dateFin: new Date('2026-06-12T18:00:00'), heure: '06h00', lieu: 'Arche Source de Vie Lubumbashi, Salle Principale', statut: 'PUBLIE', organisateur: 'Departement Prieres' },
-      { type: 'EVENEMENT', titre: 'Concert de Louange – Ascension 2026', description: 'Une nuit speciale de louange en hommage a Dieu avec des artistes chretiens de toute la region.', dateDebut: new Date('2026-05-21T19:00:00'), dateFin: new Date('2026-05-22T02:00:00'), heure: '19h00', lieu: 'Arche Source de Vie Lubumbashi, Auditorium', statut: 'PUBLIE', organisateur: 'Département Couples & Familles' },
-      { type: 'PROGRAMME_CULTE', titre: 'Culte Dominical – 4 mai 2026', description: 'Theme : "Marcher dans la lumiere de Sa Parole"', dateDebut: new Date('2026-05-04T08:30:00'), dateFin: new Date('2026-05-04T12:00:00'), heure: '08h30', lieu: 'Auditorium Principal', statut: 'PUBLIE' },
-      { type: 'EVENEMENT', titre: 'Seminaire Leaders 2026', description: 'Formation annuelle des leaders de cellule et responsables de departements.', dateDebut: new Date('2026-07-15T08:00:00'), dateFin: new Date('2026-07-16T17:00:00'), heure: '08h00', lieu: 'Salle de conference ASV', statut: 'BROUILLON', organisateur: 'Direction Pastorale' },
+      { type: 'EVENEMENT', titre: '12 heures de prière pour nos familles', description: 'Journée spéciale d\'intercession pour la restauration des familles.', dateDebut: new Date('2026-08-02T06:30:00'), dateFin: new Date('2026-08-02T18:30:00'), heure: '06h30', lieu: 'Cathédrale des Vainqueurs, 2939 Av. Mpolo, Gambela 2', statut: 'PUBLIE', organisateur: 'Ministère des Familles' },
+      { type: 'PROGRAMME_CULTE', titre: 'Culte Dominical – Enseignement', description: 'Theme : Restaurer les vies par la saine doctrine', dateDebut: new Date('2026-05-04T08:30:00'), dateFin: new Date('2026-05-04T12:00:00'), heure: '08h30', lieu: 'Cathédrale des Vainqueurs', statut: 'PUBLIE' },
+      { type: 'EVENEMENT', titre: 'Séminaire familles 2026', description: 'Formation doctrinale et accompagnement des foyers.', dateDebut: new Date('2026-07-15T08:00:00'), dateFin: new Date('2026-07-16T17:00:00'), heure: '08h00', lieu: 'Cathédrale des Vainqueurs', statut: 'BROUILLON', organisateur: 'Département d\'Enseignement' },
     ],
   });
   console.log('Evenements OK');
@@ -240,10 +225,10 @@ async function main() {
       description: 'Quatre sermons fondamentaux sur l\'abandon total a Dieu.',
       sermons: {
         create: [
-          { titre: 'La Consecration Totale – Partie 1', predicateur: 'Apôtre Israël Monga', date: new Date('2026-04-06'), lienYoutube: 'https://youtube.com/watch?v=SERMON001', ordreInPlaylist: 0 },
-          { titre: 'La Consecration Totale – Partie 2', predicateur: 'Apôtre Israël Monga', date: new Date('2026-04-13'), lienYoutube: 'https://youtube.com/watch?v=SERMON002', ordreInPlaylist: 1 },
-          { titre: 'Mourir a soi-meme', predicateur: 'Pasteur Hervé Grâce Kangudia', date: new Date('2026-04-20'), lienYoutube: 'https://youtube.com/watch?v=SERMON003', ordreInPlaylist: 2 },
-          { titre: 'Vivre pour Sa gloire', predicateur: 'Apôtre Israël Monga', date: new Date('2026-04-27'), lienYoutube: 'https://youtube.com/watch?v=SERMON004', ordreInPlaylist: 3 },
+          { titre: 'La Consecration Totale – Partie 1', predicateur: 'Rév. Dr Sébastien Ufunu', date: new Date('2026-04-06'), lienYoutube: 'https://youtube.com/watch?v=SERMON001', ordreInPlaylist: 0 },
+          { titre: 'La Consecration Totale – Partie 2', predicateur: 'Rév. Dr Sébastien Ufunu', date: new Date('2026-04-13'), lienYoutube: 'https://youtube.com/watch?v=SERMON002', ordreInPlaylist: 1 },
+          { titre: 'Mourir a soi-meme', predicateur: 'Pasteur assistant Rama', date: new Date('2026-04-20'), lienYoutube: 'https://youtube.com/watch?v=SERMON003', ordreInPlaylist: 2 },
+          { titre: 'Vivre pour Sa gloire', predicateur: 'Rév. Dr Sébastien Ufunu', date: new Date('2026-04-27'), lienYoutube: 'https://youtube.com/watch?v=SERMON004', ordreInPlaylist: 3 },
         ],
       },
     },
@@ -256,7 +241,7 @@ async function main() {
       sermons: {
         create: [
           { titre: 'L\'anatomie de la Priere', predicateur: 'Pasteur Grace Kabamba', date: new Date('2026-03-04'), lienYoutube: 'https://youtube.com/watch?v=SERMON005', ordreInPlaylist: 0 },
-          { titre: 'La Priere qui deplace les montagnes', predicateur: 'Apôtre Israël Monga', date: new Date('2026-03-11'), lienYoutube: 'https://youtube.com/watch?v=SERMON006', ordreInPlaylist: 1 },
+          { titre: 'La Priere qui deplace les montagnes', predicateur: 'Rév. Dr Sébastien Ufunu', date: new Date('2026-03-11'), lienYoutube: 'https://youtube.com/watch?v=SERMON006', ordreInPlaylist: 1 },
         ],
       },
     },
@@ -267,7 +252,7 @@ async function main() {
   const culteEnDirect = await prisma.culte.create({
     data: {
       titre: 'Culte du Mercredi 29 Avril 2026 – EN DIRECT',
-      description: 'Culte de la mi-semaine avec le Apôtre Israël Monga. Theme : "L\'esperance qui ne deceoit pas"',
+      description: 'Culte de la mi-semaine avec le Rév. Dr Sébastien Ufunu. Theme : "L\'esperance qui ne deceoit pas"',
       type: 'MERCREDI', date: new Date('2026-04-29'), statut: 'EN_DIRECT',
       lienYoutube: 'https://youtube.com/live/CULTE_LIVE_001',
     },
@@ -286,7 +271,7 @@ async function main() {
   await prisma.emission.createMany({
     data: [
       { titre: 'Autour de la Parole – Ep. 120', type: 'EMISSION_TV', date: new Date('2026-04-28'), lienYoutube: 'https://youtube.com/watch?v=EMISSION001', description: 'Etude biblique quotidienne sur le livre de Jean' },
-      { titre: 'Recevez la Vie Radio – Podcast #45', type: 'EMISSION_RADIO', date: new Date('2026-04-25'), lienYoutube: 'https://youtube.com/watch?v=EMISSION002', description: 'Interview : Temoignages de guerisons miraculeuses' },
+      { titre: 'Restaurer les vies Radio – Podcast #45', type: 'EMISSION_RADIO', date: new Date('2026-04-25'), lienYoutube: 'https://youtube.com/watch?v=EMISSION002', description: 'Interview : Temoignages de guerisons miraculeuses' },
       { titre: 'Autour de la Parole – Ep. 119', type: 'EMISSION_TV', date: new Date('2026-04-21'), lienYoutube: 'https://youtube.com/watch?v=EMISSION003' },
     ],
   });
@@ -295,9 +280,9 @@ async function main() {
   // ─── CITATIONS ───────────────────────────────────────────────
   await prisma.citation.createMany({
     data: [
-      { imageUrl: 'https://res.cloudinary.com/dglb0uqr8/image/upload/v1/arche-source-de-vie/citations/citation001.jpg', cloudinaryPublicId: 'arche-source-de-vie/citations/citation001', texte: 'La foi, c\'est croire ce qu\'on ne voit pas ; la recompense de la foi, c\'est de voir ce qu\'on croit.', auteur: 'Saint Augustin' },
-      { imageUrl: 'https://res.cloudinary.com/dglb0uqr8/image/upload/v1/arche-source-de-vie/citations/citation002.jpg', cloudinaryPublicId: 'arche-source-de-vie/citations/citation002', texte: 'Le chemin le plus court vers Dieu, c\'est la priere.', auteur: 'Charles Spurgeon' },
-      { imageUrl: 'https://res.cloudinary.com/dglb0uqr8/image/upload/v1/arche-source-de-vie/citations/citation003.jpg', cloudinaryPublicId: 'arche-source-de-vie/citations/citation003', texte: 'Dieu n\'a jamais promis que le chemin serait facile, mais Il a promis qu\'il ne serait jamais solitaire.', auteur: 'Max Lucado' },
+      { imageUrl: 'https://res.cloudinary.com/dglb0uqr8/image/upload/v1/rama-lubumbashi/citations/citation001.jpg', cloudinaryPublicId: 'rama-lubumbashi/citations/citation001', texte: 'La foi, c\'est croire ce qu\'on ne voit pas ; la recompense de la foi, c\'est de voir ce qu\'on croit.', auteur: 'Saint Augustin' },
+      { imageUrl: 'https://res.cloudinary.com/dglb0uqr8/image/upload/v1/rama-lubumbashi/citations/citation002.jpg', cloudinaryPublicId: 'rama-lubumbashi/citations/citation002', texte: 'Le chemin le plus court vers Dieu, c\'est la priere.', auteur: 'Charles Spurgeon' },
+      { imageUrl: 'https://res.cloudinary.com/dglb0uqr8/image/upload/v1/rama-lubumbashi/citations/citation003.jpg', cloudinaryPublicId: 'rama-lubumbashi/citations/citation003', texte: 'Dieu n\'a jamais promis que le chemin serait facile, mais Il a promis qu\'il ne serait jamais solitaire.', auteur: 'Max Lucado' },
     ],
   });
   console.log('Citations OK');
@@ -306,7 +291,7 @@ async function main() {
   await prisma.articleBookshop.createMany({
     data: [
       { titre: 'La Bible du Semeur', auteur: 'Collectif', prix: 25.00, description: 'La version du Semeur, traduction claire et lisible en francais contemporain. Edition integrale avec notes.', estDisponible: true, numeroWhatsappAchat: '+243814993485', typeArticle: 'LIVRE', stock: 20 },
-      { titre: 'Vivre dans la presence de Dieu', auteur: 'Apôtre Israël Monga', prix: 8.50, description: 'Un guide pratique pour developper une vie de priere profonde et une communion intime avec Dieu.', estDisponible: true, typeArticle: 'LIVRE', stock: 15 },
+      { titre: 'Vivre dans la presence de Dieu', auteur: 'Rév. Dr Sébastien Ufunu', prix: 8.50, description: 'Un guide pratique pour developper une vie de priere profonde et une communion intime avec Dieu.', estDisponible: true, typeArticle: 'LIVRE', stock: 15 },
       { titre: 'Prieres et Declarations', auteur: 'John Hagee', prix: 12.00, description: 'Un recueil de prieres scripturaires pour toutes les situations de la vie. Traduit en francais.', estDisponible: true, typeArticle: 'LIVRE', stock: 10 },
       { titre: 'Le Pouvoir de la Parole', auteur: 'Kenneth Hagin', prix: 10.00, description: 'Comment les paroles que nous prononcons facon notre realite selon les principes bibliques.', estDisponible: false, typeArticle: 'LIVRE', stock: 0 },
     ],
@@ -332,7 +317,7 @@ async function main() {
 
   await prisma.requete.create({
     data: {
-      type: 'PRIERE_SALUT', egliseId: egliseLubs.id,
+      type: 'PRIERE_SALUT', egliseId: egliseMere.id,
       nomVisiteur: 'Mukeba', prenomVisiteur: 'Junior',
       whatsappVisiteur: '+243990001122',
       statut: 'LU',
@@ -341,7 +326,7 @@ async function main() {
 
   await prisma.requete.create({
     data: {
-      type: 'INTEGRATION', egliseId: egliseLubs.id,
+      type: 'INTEGRATION', egliseId: egliseMere.id,
       nomVisiteur: 'Tshimanga', prenomVisiteur: 'Chloe',
       whatsappVisiteur: '+243990003344', emailVisiteur: 'chloe.tshimanga@email.com',
       statut: 'EN_ATTENTE',
@@ -350,7 +335,7 @@ async function main() {
 
   await prisma.requete.create({
     data: {
-      type: 'BAPTEME', userId: fidele3.id, egliseId: egliseLubs.id,
+      type: 'BAPTEME', userId: fidele3.id, egliseId: egliseMere.id,
       message: 'Je desire me faire baptiser par immersion. Je suis membre depuis 8 mois.',
       statut: 'CONFIRME',
     },
@@ -369,7 +354,7 @@ async function main() {
   await prisma.requete.create({
     data: {
       type: 'RENOUVELLEMENT',
-      egliseNom: 'Arche Source de Vie – Pointe-Noire',
+      egliseNom: 'Cathédrale des Vainqueurs — Rama Lubumbashi',
       nomVisiteur: 'Nsungu', prenomVisiteur: 'Didier',
       whatsappVisiteur: '+243990007788',
       statut: 'EN_ATTENTE',
@@ -398,7 +383,7 @@ async function main() {
       messages: {
         create: [
           { expediteurId: fidele1.id, contenu: 'Bonjour Soeur Grace, j\'aimerais avoir des informations sur le camp de prieres de juin.', statut: 'LU' },
-          { expediteurId: admin1.id, contenu: 'Bonjour Soeur Sarah ! Le séminaire se tiendra prochainement au campus Arche Source de Vie Lubumbashi. Souhaitez-vous vous inscrire ?', statut: 'LU' },
+          { expediteurId: admin1.id, contenu: 'Bonjour Soeur Sarah ! Le séminaire se tiendra prochainement au campus Cathédrale des Vainqueurs. Souhaitez-vous vous inscrire ?', statut: 'LU' },
           { expediteurId: fidele1.id, contenu: 'Oui, je suis tres interessee ! Comment proceder ?', statut: 'ENVOYE' },
         ],
       },
@@ -437,7 +422,7 @@ async function main() {
           prenom: fidele3.prenom ?? '',
           telephone: fidele3.numeroWhatsapp ?? '',
           adresse: 'Av. Tshimakinda, Q. Somika',
-          egliseId: egliseLubs.id,
+          egliseId: egliseMere.id,
           statut: 'EN_ATTENTE',
         },
       },
@@ -447,7 +432,7 @@ async function main() {
   const sessionMembre = await prisma.sessionFormulaire.create({
     data: {
       titre: 'Identification des Membres — 2026',
-      description: 'Campagne d\'enregistrement et d\'identification des membres de Arche Source de Vie.',
+      description: 'Campagne d\'enregistrement et d\'identification des membres de Rama Lubumbashi.',
       type: 'ENREGISTREMENT_MEMBRE',
       dateDebut: new Date('2026-06-01'),
       dateFin: new Date('2026-12-31'),
@@ -467,14 +452,14 @@ async function main() {
             lieuNaissance: 'Lubumbashi',
             etatCivil: 'CELIBATAIRE',
             dateBapteme: new Date('2018-08-12'),
-            lieuBapteme: 'Arche Source de Vie Lubumbashi',
+            lieuBapteme: 'Cathédrale des Vainqueurs',
             niveauEtudes: 'Licence en Droit',
             profession: 'Juriste',
             adressePhysique: 'Av. Kasai 45, Q. Kenya',
             ville: 'Lubumbashi',
             commune: 'Annexe',
             quartier: 'Kenya',
-            egliseNom: 'Arche Source de Vie – Lubumbashi',
+            egliseNom: 'Rama Lubumbashi – Lubumbashi',
             formationEglise: 'École de disciples — Promotion 2019',
             autresSavoirFaire: 'Chant, accueil',
             nombreEnfants: 0,
@@ -494,18 +479,18 @@ async function main() {
             lieuNaissance: 'Kolwezi',
             etatCivil: 'MARIE',
             dateBapteme: new Date('2010-05-20'),
-            lieuBapteme: 'Arche Source de Vie Pointe-Noire',
+            lieuBapteme: 'Cathédrale des Vainqueurs — Rama Lubumbashi',
             niveauEtudes: 'Graduat en Gestion',
             profession: 'Comptable',
             adressePhysique: 'Q. Manika, Rue Kando 8',
             ville: 'Kolwezi',
             commune: 'Manika',
             quartier: 'Musonoie',
-            egliseNom: 'Arche Source de Vie – Pointe-Noire',
+            egliseNom: 'Cathédrale des Vainqueurs — Rama Lubumbashi',
             formationEglise: 'École de disciples — Promotion 2015',
             nomConjoint: 'Grace Ilunga',
             nombreEnfants: 2,
-            matricule: 'ASV0000001',
+            matricule: 'RAMA0000001',
             numeroCarteMembre: 'CARTE-2026-0001',
             dateAdhesion: new Date('2026-06-10'),
             statut: 'VALIDE',
@@ -542,9 +527,9 @@ async function main() {
 
   console.log('\n=== SEED TERMINE AVEC SUCCES ===');
   console.log('Comptes disponibles :');
-  console.log('  SUPER_ADMIN : superadmin@archesourcevie.cd / Admin@2026!');
-  console.log('  ADMIN       : secretariat.lubumbashi@archesourcevie.cd / Admin@2026!');
-  console.log('  ADMIN       : secretariat.pointenoire@archesourcevie.cd / Admin@2026!');
+  console.log('  SUPER_ADMIN : superadmin@ramalubumbashi.org / Admin@2026!');
+  console.log('  ADMIN       : secretariat@ramalubumbashi.org / Admin@2026!');
+  console.log('  ADMIN       : librairie@ramalubumbashi.org / Admin@2026!');
   console.log('  FIDELE      : +243991234567 / Fidele@2026!');
   console.log('  FIDELE      : +243991234568 / Fidele@2026!');
   console.log('  FIDELE      : +243991234569 / Fidele@2026!');

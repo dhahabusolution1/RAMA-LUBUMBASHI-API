@@ -17,7 +17,7 @@ export interface InitierDonInput {
 
 function generateReference(): string {
   const suffix = randomBytes(4).toString('hex').toUpperCase();
-  return `ASV-DON-${Date.now()}-${suffix}`;
+  return `RAMA-DON-${Date.now()}-${suffix}`;
 }
 
 function normalizeNotifyStatus(payload: Record<string, unknown>): StatutDon | null {

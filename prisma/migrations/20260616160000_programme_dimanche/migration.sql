@@ -1,2 +1,2 @@
 -- AlterTable
-ALTER TABLE "ConfigurationApp" ADD COLUMN "programmeDimanche" TEXT;
+ALTER TABLE "ConfigurationApp" ADD COLUMN IF NOT EXISTS "programmeDimanche" TEXT;

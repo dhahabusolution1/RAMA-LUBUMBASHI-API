@@ -10,7 +10,7 @@ dist/
 .env.production
 
 # Credentials Firebase (NE JAMAIS COMMITTER)
-arche-source-de-vie-firebase-adminsdk-fbsvc-8735b47b25.json
+rama-lubumbashi-project-firebase-adminsdk-fbsvc-c13e7efc14.json
 
 # Prisma (Les migrations DOIVENT être committées)
 # node_modules/.prisma/ est déjà ignoré via node_modules/

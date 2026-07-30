@@ -35,12 +35,12 @@ function ajouterUnAn(date: Date): Date {
 function extraireSequenceMatricule(matricule: string | null): number {
   if (!matricule) return 0;
 
-  const nouveauFormat = matricule.match(/^ASV(\d+)$/i);
+  const nouveauFormat = matricule.match(/^RAMA(\d+)$/i);
   if (nouveauFormat?.[1]) {
     return Number.parseInt(nouveauFormat[1], 10) || 0;
   }
 
-  const ancienFormat = matricule.match(/^ASV-\d{4}-(\d+)$/i);
+  const ancienFormat = matricule.match(/^RAMA-\d{4}-(\d+)$/i);
   if (ancienFormat?.[1]) {
     return Number.parseInt(ancienFormat[1], 10) || 0;
   }
@@ -61,7 +61,7 @@ function extraireSequenceMatricule(matricule: string | null): number {
 }
 
 async function genererMatricule(): Promise<string> {
-  const prefix = process.env['MATRICULE_PREFIX'] ?? 'ASV';
+  const prefix = process.env['MATRICULE_PREFIX'] ?? 'RAMA';
 
   const matricules = await prisma.inscriptionSession.findMany({
     where: { matricule: { startsWith: prefix } },

@@ -1,4 +1,4 @@
-﻿import { GraphQLError } from 'graphql';
+import { GraphQLError } from 'graphql';
 import type { Requete, StatutRequete } from '@prisma/client';
 import prisma from '../config/database.js';
 import { logger } from '../utils/logger.js';
@@ -94,13 +94,13 @@ export async function soumettreRequete(userId: string, input: {
 
   if (requete.type === 'PRIERE') {
     notifTitre = 'Demande de prière reçue';
-    notifCorps = `Shalom bien-aimé (e) ${nomComplet} que la paix du Seigneur soit avec vous! Nous avons reçu votre demande de prière \nQue Dieu vous bénisse !!\nArche Source de Vie`;
+    notifCorps = `Shalom bien-aimé (e) ${nomComplet} que la paix du Seigneur soit avec vous! Nous avons reçu votre demande de prière \nQue Dieu vous bénisse !!\nRama Lubumbashi`;
   } else if (requete.type === 'PRIERE_SALUT') {
     notifTitre = 'Demande de prière du salut reçue';
-    notifCorps = `Shalom bien-aimé (e) ${nomComplet} que la paix du Seigneur soit avec vous! Nous avons reçu votre demande de prière du salut \nQue Dieu vous bénisse !!\nArche Source de Vie`;
+    notifCorps = `Shalom bien-aimé (e) ${nomComplet} que la paix du Seigneur soit avec vous! Nous avons reçu votre demande de prière du salut \nQue Dieu vous bénisse !!\nRama Lubumbashi`;
   } else if (requete.type === 'RENOUVELLEMENT') {
     notifTitre = 'Demande de prière de renouvellement reçue';
-    notifCorps = `Shalom bien-aimé (e) ${nomComplet} que la paix du Seigneur soit avec vous! Nous avons reçu votre demande de prière de renouvellement \nQue Dieu vous bénisse !!\nArche Source de Vie`;
+    notifCorps = `Shalom bien-aimé (e) ${nomComplet} que la paix du Seigneur soit avec vous! Nous avons reçu votre demande de prière de renouvellement \nQue Dieu vous bénisse !!\nRama Lubumbashi`;
   }
 
   if (notifTitre && notifCorps) {

@@ -1,3 +1,3 @@
--- Capture fiche identification membre (photo / scan du formulaire papier)
-ALTER TABLE "InscriptionSession" ADD COLUMN "captureFicheUrl" TEXT;
-ALTER TABLE "InscriptionSession" ADD COLUMN "captureFichePublicId" TEXT;
+-- Capture fiche identification membre
+ALTER TABLE "InscriptionSession" ADD COLUMN IF NOT EXISTS "captureFicheUrl" TEXT;
+ALTER TABLE "InscriptionSession" ADD COLUMN IF NOT EXISTS "captureFichePublicId" TEXT;

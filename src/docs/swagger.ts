@@ -4,7 +4,7 @@ const options: swaggerJsdoc.Options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Arche Source de Vie API',
+      title: 'Rama Lubumbashi API',
       version: '2.0.0',
       description: 'Documentation des endpoints REST du backend (Uploads, Health)',
     },

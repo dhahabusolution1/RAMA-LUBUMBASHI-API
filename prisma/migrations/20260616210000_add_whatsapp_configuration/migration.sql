@@ -1,5 +1,3 @@
 -- AlterTable
-ALTER TABLE "ConfigurationApp" ADD COLUMN "numeroWhatsappBookshop" TEXT;
-
--- AlterTable
-ALTER TABLE "ConfigurationApp" ADD COLUMN "lienGroupeWhatsapp" TEXT;
+ALTER TABLE "ConfigurationApp" ADD COLUMN IF NOT EXISTS "numeroWhatsappBookshop" TEXT;
+ALTER TABLE "ConfigurationApp" ADD COLUMN IF NOT EXISTS "lienGroupeWhatsapp" TEXT;

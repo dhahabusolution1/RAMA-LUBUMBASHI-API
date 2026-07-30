@@ -1,8 +1,8 @@
 {
-  "name": "arche-source-de-vie-backend",
+  "name": "rama-lubumbashi-backend",
   "version": "2.0.0",
-  "description": "Backend API — Arche Source de Vie (GraphQL + REST)",
-  "author": "Arche Source de Vie",
+  "description": "Backend API — Rama Lubumbashi (GraphQL + REST)",
+  "author": "Rama Lubumbashi",
   "license": "UNLICENSED",
   "private": true,
   "engines": {

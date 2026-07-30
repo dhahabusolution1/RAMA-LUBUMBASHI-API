@@ -1,13 +1,15 @@
-# La Parole Eternelle v2 — Backend API
-# → Instance Arche Source de Vie
+# Rama Lubumbashi — Backend API
 
-Voir le README à la racine du projet `ARCHE_SOURCE_DE_VIE`.
+Instance dédiée : Église Rama Lubumbashi — Cathédrale des Vainqueurs.
 
 ## Comptes seed
 
 | Rôle | Identifiant | Mot de passe |
 |------|-------------|--------------|
-| **SUPER_ADMIN** | `superadmin@archesourcevie.cd` | `Admin@2026!` |
-| **ADMIN** | `secretariat.lubumbashi@archesourcevie.cd` | `Admin@2026!` |
-| **ADMIN** | `secretariat.pointenoire@archesourcevie.cd` | `Admin@2026!` |
+| **SUPER_ADMIN** | `superadmin@ramalubumbashi.org` | `Admin@2026!` |
+| **ADMIN** | `secretariat@ramalubumbashi.org` | `Admin@2026!` |
+| **ADMIN** | `librairie@ramalubumbashi.org` | `Admin@2026!` |
 | **FIDELE** | `+243991234567` | `Fidele@2026!` |
+
+Préfixe matricule : `RAMA`  
+WhatsApp plateforme : `+243 993 038 602`
