@@ -207,3 +207,50 @@ export async function changeMotDePasse(
     data: { motDePasseHash: newHash },
   });
 }
+
+/**
+ * Suppression du compte de l'utilisateur connecte (Guideline Apple 5.1.1v).
+ * Soft-delete + anonymisation PII + liberation des identifiants uniques + purge FCM.
+ */
+export async function supprimerMonCompte(userId: string, motDePasse: string): Promise<void> {
+  const user = await prisma.user.findFirst({
+    where: { id: userId, deletedAt: null },
+  });
+
+  if (!user?.motDePasseHash) {
+    throw new GraphQLError('Utilisateur introuvable', { extensions: { code: 'NOT_FOUND' } });
+  }
+
+  const isValid = await bcrypt.compare(motDePasse, user.motDePasseHash);
+  if (!isValid) {
+    throw new GraphQLError('Mot de passe incorrect', {
+      extensions: { code: 'BAD_USER_INPUT' },
+    });
+  }
+
+  if (user.role === 'SUPER_ADMIN') {
+    throw new GraphQLError(
+      'Un Super Admin ne peut pas supprimer son compte depuis l’application. Contactez un autre Super Admin.',
+      { extensions: { code: 'FORBIDDEN' } }
+    );
+  }
+
+  await prisma.$transaction([
+    prisma.fcmToken.deleteMany({ where: { userId } }),
+    prisma.user.update({
+      where: { id: userId },
+      data: {
+        deletedAt: new Date(),
+        nom: 'Compte supprimé',
+        postnom: null,
+        prenom: null,
+        email: null,
+        numeroWhatsapp: null,
+        photoUrl: null,
+        motDePasseHash: null,
+      },
+    }),
+  ]);
+
+  logger.info('Compte utilisateur supprime', { userId, role: user.role });
+}

@@ -104,6 +104,14 @@ extend type Mutation {
   changeMotDePasse(ancienMotDePasse: String!, nouveauMotDePasse: String!): Boolean!
 
   """
+  Supprime definitivement le compte de l'utilisateur connecte (App Store 5.1.1v).
+  Soft-delete + anonymisation des donnees personnelles + revocation des tokens FCM.
+  Requiert le mot de passe actuel pour confirmation.
+  Apres succes, l'utilisateur ne peut plus se reconnecter ; le numero WhatsApp / email peut etre reutilise.
+  """
+  supprimerMonCompte(motDePasse: String!): Boolean!
+
+  """
   Enregistre ou met a jour le token FCM de l'appareil pour les notifications push.
   Accessible aux utilisateurs connectes et aux visiteurs anonymes.
   """

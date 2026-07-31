@@ -5,6 +5,7 @@ import {
   loginAdmin,
   refreshUserToken,
   changeMotDePasse,
+  supprimerMonCompte,
 } from '../../services/auth.service.js';
 import { enregistrerFcmToken } from '../../services/notification.service.js';
 import { requireAuth } from '../../middlewares/rbac.js';
@@ -78,6 +79,16 @@ export const authResolvers = {
     ) {
       const user = requireAuth(ctx);
       await changeMotDePasse(user.id, ancienMotDePasse, nouveauMotDePasse);
+      return true;
+    },
+
+    async supprimerMonCompte(
+      _: unknown,
+      { motDePasse }: { motDePasse: string },
+      ctx: GraphQLContext
+    ) {
+      const user = requireAuth(ctx);
+      await supprimerMonCompte(user.id, motDePasse);
       return true;
     },
 
